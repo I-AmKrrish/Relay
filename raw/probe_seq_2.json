@@ -1,0 +1,26 @@
+{
+  "request_id": "probe_seq_2",
+  "scenario": "probe_seq",
+  "timestamp_iso": "2026-11-10T20:48:08.963973+00:00",
+  "model": "qwen/qwen3.8-27b",
+  "prompt": "What is an audio codec in 15 words?",
+  "max_tokens": 35,
+  "status_code": 200,
+  "status": "ok",
+  "first_token_ms": 335.07100000133505,
+  "total_ms": 341.99850000004517,
+  "tokens_in": 23,
+  "tokens_out": 19,
+  "headers": {
+    "date": "Tue, 10 Nov 2026 20:48:09 GMT",
+    "content-type": "text/event-stream",
+    "x-ratelimit-limit-requests": "1000",
+    "x-ratelimit-limit-tokens": "8000",
+    "x-ratelimit-remaining-requests": "998",
+    "x-ratelimit-remaining-tokens": "7940",
+    "x-ratelimit-reset-requests": "2m52.8s",
+    "x-ratelimit-reset-tokens": "2.219s"
+  },
+  "response_text": "A digital algorithm that compresses or decompresses audio data for efficient storage and transmission.",
+  "raw_error": null
+}

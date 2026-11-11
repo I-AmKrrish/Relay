@@ -1,0 +1,26 @@
+{
+  "request_id": "probe_seq_3",
+  "scenario": "probe_seq",
+  "timestamp_iso": "2026-11-10T20:48:10.011823+00:00",
+  "model": "qwen/qwen3.8-27b",
+  "prompt": "What is byte-level language modeling in 15 words?",
+  "max_tokens": 35,
+  "status_code": 200,
+  "status": "ok",
+  "first_token_ms": 506.23260000065784,
+  "total_ms": 540.4057000014291,
+  "tokens_in": 24,
+  "tokens_out": 17,
+  "headers": {
+    "date": "Tue, 10 Nov 2026 20:48:10 GMT",
+    "content-type": "text/event-stream",
+    "x-ratelimit-limit-requests": "1000",
+    "x-ratelimit-limit-tokens": "8000",
+    "x-ratelimit-remaining-requests": "997",
+    "x-ratelimit-remaining-tokens": "7957",
+    "x-ratelimit-reset-requests": "4m19.2s",
+    "x-ratelimit-reset-tokens": "1.14s"
+  },
+  "response_text": "Predicting the next byte in a sequence, treating text as raw binary data.",
+  "raw_error": null
+}

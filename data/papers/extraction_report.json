@@ -1,0 +1,554 @@
+{
+  "papers": {
+    "attention": {
+      "title": "Attention Is All You Need",
+      "arxiv_id": "1706.03762v7",
+      "page_count": 15,
+      "total_words": 5931,
+      "sections_count": 24,
+      "sections_list": [
+        {
+          "page": 1,
+          "section": "Abstract"
+        },
+        {
+          "page": 2,
+          "section": "1 Introduction"
+        },
+        {
+          "page": 2,
+          "section": "2 Background"
+        },
+        {
+          "page": 2,
+          "section": "3 Model Architecture"
+        },
+        {
+          "page": 3,
+          "section": "3.1 Encoder and Decoder Stacks"
+        },
+        {
+          "page": 3,
+          "section": "3.2 Attention"
+        },
+        {
+          "page": 4,
+          "section": "3.2.1 Scaled Dot-Product Attention"
+        },
+        {
+          "page": 4,
+          "section": "3.2.2 Multi-Head Attention"
+        },
+        {
+          "page": 5,
+          "section": "3.2.3 Applications of Attention in our Model"
+        },
+        {
+          "page": 5,
+          "section": "3.3 Position-wise Feed-Forward Networks"
+        },
+        {
+          "page": 5,
+          "section": "3.4 Embeddings and Softmax"
+        },
+        {
+          "page": 6,
+          "section": "3.5 Positional Encoding"
+        },
+        {
+          "page": 6,
+          "section": "4 Why Self-Attention"
+        },
+        {
+          "page": 7,
+          "section": "5 Training"
+        },
+        {
+          "page": 7,
+          "section": "5.1 Training Data and Batching"
+        },
+        {
+          "page": 7,
+          "section": "5.2 Hardware and Schedule"
+        },
+        {
+          "page": 7,
+          "section": "5.3 Optimizer"
+        },
+        {
+          "page": 7,
+          "section": "5.4 Regularization"
+        },
+        {
+          "page": 8,
+          "section": "6 Results"
+        },
+        {
+          "page": 8,
+          "section": "6.1 Machine Translation"
+        },
+        {
+          "page": 8,
+          "section": "6.2 Model Variations"
+        },
+        {
+          "page": 9,
+          "section": "6.3 English Constituency Parsing"
+        },
+        {
+          "page": 10,
+          "section": "7 Conclusion"
+        },
+        {
+          "page": 10,
+          "section": "References"
+        }
+      ],
+      "anomalies": {
+        "mangled_equations_count": 2,
+        "mangled_equations": [
+          {
+            "page": 4,
+            "sample": "Detected broken fraction or radical (e.g. QKT / √dk)"
+          },
+          {
+            "page": 5,
+            "sample": "Detected broken fraction or radical (e.g. QKT / √dk)"
+          }
+        ],
+        "table_linearization_count": 4,
+        "table_linearization": [
+          {
+            "page": 6,
+            "table_indicator": "Table 1:",
+            "sample": "Table detected on page 6; columnar grid flattened into sequential lines"
+          },
+          {
+            "page": 8,
+            "table_indicator": "Table 2:",
+            "sample": "Table detected on page 8; columnar grid flattened into sequential lines"
+          },
+          {
+            "page": 9,
+            "table_indicator": "Table 3:",
+            "sample": "Table detected on page 9; columnar grid flattened into sequential lines"
+          },
+          {
+            "page": 10,
+            "table_indicator": "Table 4:",
+            "sample": "Table detected on page 10; columnar grid flattened into sequential lines"
+          }
+        ],
+        "diagram_artifacts_count": 0,
+        "diagram_artifacts": []
+      }
+    },
+    "moshi": {
+      "title": "Moshi: a speech-text foundation model for real-time dialogue",
+      "arxiv_id": "2410.00037v1",
+      "page_count": 66,
+      "total_words": 28805,
+      "sections_count": 36,
+      "sections_list": [
+        {
+          "page": 1,
+          "section": "Abstract"
+        },
+        {
+          "page": 2,
+          "section": "1 Introduction"
+        },
+        {
+          "page": 4,
+          "section": "2 Related Work"
+        },
+        {
+          "page": 6,
+          "section": "3 Model"
+        },
+        {
+          "page": 6,
+          "section": "3.1 Overview"
+        },
+        {
+          "page": 7,
+          "section": "3.2 The Helium Text Language Model"
+        },
+        {
+          "page": 7,
+          "section": "3.2.1 Architecture"
+        },
+        {
+          "page": 7,
+          "section": "3.2.2 Pre-training data filtering"
+        },
+        {
+          "page": 9,
+          "section": "3.3 Audio Tokenization"
+        },
+        {
+          "page": 9,
+          "section": "3.3.1 Architecture"
+        },
+        {
+          "page": 12,
+          "section": "3.4 Generative audio modeling"
+        },
+        {
+          "page": 12,
+          "section": "3.4.1 Hierarchical autoregressive modeling with RQ-Transformer"
+        },
+        {
+          "page": 14,
+          "section": "3.4.2 Audio modeling"
+        },
+        {
+          "page": 14,
+          "section": "3.4.3 Multi-stream modeling"
+        },
+        {
+          "page": 15,
+          "section": "3.4.4 Inner Monologue"
+        },
+        {
+          "page": 17,
+          "section": "4 Datasets and training"
+        },
+        {
+          "page": 17,
+          "section": "4.1 Text data"
+        },
+        {
+          "page": 17,
+          "section": "4.2 Audio data"
+        },
+        {
+          "page": 18,
+          "section": "4.3 Speech-Text Instruct data"
+        },
+        {
+          "page": 20,
+          "section": "4.4 Training stages and hyper-parameters"
+        },
+        {
+          "page": 21,
+          "section": "5 Evaluation"
+        },
+        {
+          "page": 21,
+          "section": "5.1 Text Language Modeling"
+        },
+        {
+          "page": 23,
+          "section": "5.2 Audio Tokenization"
+        },
+        {
+          "page": 25,
+          "section": "5.3 Ablations on generative modeling"
+        },
+        {
+          "page": 26,
+          "section": "5.4 Audio language modeling"
+        },
+        {
+          "page": 29,
+          "section": "5.5 Spoken question answering"
+        },
+        {
+          "page": 30,
+          "section": "5.6 Quality and statistics of generated dialogues"
+        },
+        {
+          "page": 31,
+          "section": "5.7 Streaming ASR and TTS"
+        },
+        {
+          "page": 31,
+          "section": "5.8 Compressing Moshi and Impact on Speech Quality"
+        },
+        {
+          "page": 35,
+          "section": "6 Safety"
+        },
+        {
+          "page": 36,
+          "section": "6.1 Toxicity analysis"
+        },
+        {
+          "page": 36,
+          "section": "6.2 Regurgitation analysis"
+        },
+        {
+          "page": 37,
+          "section": "6.3 System voice consistency"
+        },
+        {
+          "page": 38,
+          "section": "6.4 Identification of the content generated by Moshi: Watermarking"
+        },
+        {
+          "page": 41,
+          "section": "7 Conclusion"
+        },
+        {
+          "page": 42,
+          "section": "References"
+        }
+      ],
+      "anomalies": {
+        "mangled_equations_count": 0,
+        "mangled_equations": [],
+        "table_linearization_count": 5,
+        "table_linearization": [
+          {
+            "page": 8,
+            "table_indicator": "Table 1:",
+            "sample": "Table detected on page 8; columnar grid flattened into sequential lines"
+          },
+          {
+            "page": 22,
+            "table_indicator": "Table 2:",
+            "sample": "Table detected on page 22; columnar grid flattened into sequential lines"
+          },
+          {
+            "page": 22,
+            "table_indicator": "Table 3:",
+            "sample": "Table detected on page 22; columnar grid flattened into sequential lines"
+          },
+          {
+            "page": 23,
+            "table_indicator": "Table 4:",
+            "sample": "Table detected on page 23; columnar grid flattened into sequential lines"
+          },
+          {
+            "page": 25,
+            "table_indicator": "Table 5:",
+            "sample": "Table detected on page 25; columnar grid flattened into sequential lines"
+          }
+        ],
+        "diagram_artifacts_count": 8,
+        "diagram_artifacts": [
+          {
+            "page": 8,
+            "max_consecutive_single_chars": 5,
+            "sample": "Vertical glyph stacking from diagram/figure labels"
+          },
+          {
+            "page": 14,
+            "max_consecutive_single_chars": 5,
+            "sample": "Vertical glyph stacking from diagram/figure labels"
+          },
+          {
+            "page": 22,
+            "max_consecutive_single_chars": 5,
+            "sample": "Vertical glyph stacking from diagram/figure labels"
+          },
+          {
+            "page": 23,
+            "max_consecutive_single_chars": 5,
+            "sample": "Vertical glyph stacking from diagram/figure labels"
+          },
+          {
+            "page": 34,
+            "max_consecutive_single_chars": 10,
+            "sample": "Vertical glyph stacking from diagram/figure labels"
+          },
+          {
+            "page": 53,
+            "max_consecutive_single_chars": 5,
+            "sample": "Vertical glyph stacking from diagram/figure labels"
+          },
+          {
+            "page": 56,
+            "max_consecutive_single_chars": 4,
+            "sample": "Vertical glyph stacking from diagram/figure labels"
+          },
+          {
+            "page": 59,
+            "max_consecutive_single_chars": 5,
+            "sample": "Vertical glyph stacking from diagram/figure labels"
+          }
+        ]
+      }
+    },
+    "dynamic_chunking": {
+      "title": "Dynamic Chunking for End-to-End Hierarchical Sequence Modeling",
+      "arxiv_id": "2507.07955v2",
+      "page_count": 39,
+      "total_words": 21079,
+      "sections_count": 24,
+      "sections_list": [
+        {
+          "page": 1,
+          "section": "Abstract"
+        },
+        {
+          "page": 1,
+          "section": "1 Introduction"
+        },
+        {
+          "page": 4,
+          "section": "2 H-Net Architecture"
+        },
+        {
+          "page": 4,
+          "section": "2.1 Architectural Overview"
+        },
+        {
+          "page": 4,
+          "section": "2.1.1 Components of H-Net"
+        },
+        {
+          "page": 5,
+          "section": "2.1.2 Design Principles"
+        },
+        {
+          "page": 6,
+          "section": "2.2 Dynamic Chunking (DC)"
+        },
+        {
+          "page": 6,
+          "section": "2.2.1 Chunking Layer"
+        },
+        {
+          "page": 6,
+          "section": "2.2.2 Dechunking"
+        },
+        {
+          "page": 8,
+          "section": "2.2.3 Ratio Loss"
+        },
+        {
+          "page": 8,
+          "section": "2.3 Improved Techniques for Hierarchical Sequence Modeling"
+        },
+        {
+          "page": 9,
+          "section": "2.4 Autoregressive Training and Inference"
+        },
+        {
+          "page": 10,
+          "section": "3 Experiments"
+        },
+        {
+          "page": 12,
+          "section": "3.1 Language Modeling"
+        },
+        {
+          "page": 15,
+          "section": "3.2 Alternate Language Datasets"
+        },
+        {
+          "page": 16,
+          "section": "0.44 Code (Pile Github)"
+        },
+        {
+          "page": 17,
+          "section": "3.3 Ablation Studies"
+        },
+        {
+          "page": 18,
+          "section": "0.94 Bits-per-byte"
+        },
+        {
+          "page": 20,
+          "section": "0.86 Bits-per-byte"
+        },
+        {
+          "page": 22,
+          "section": "4 Discussion"
+        },
+        {
+          "page": 23,
+          "section": "5 Conclusion"
+        },
+        {
+          "page": 24,
+          "section": "Acknowledgements"
+        },
+        {
+          "page": 25,
+          "section": "References"
+        },
+        {
+          "page": 37,
+          "section": "2.95 Perplexity on HG38"
+        }
+      ],
+      "anomalies": {
+        "mangled_equations_count": 1,
+        "mangled_equations": [
+          {
+            "page": 35,
+            "sample": "Detected broken fraction or radical (e.g. QKT / √dk)"
+          }
+        ],
+        "table_linearization_count": 5,
+        "table_linearization": [
+          {
+            "page": 11,
+            "table_indicator": "Table 1:",
+            "sample": "Table detected on page 11; columnar grid flattened into sequential lines"
+          },
+          {
+            "page": 13,
+            "table_indicator": "Table 2:",
+            "sample": "Table detected on page 13; columnar grid flattened into sequential lines"
+          },
+          {
+            "page": 14,
+            "table_indicator": "Table 3:",
+            "sample": "Table detected on page 14; columnar grid flattened into sequential lines"
+          },
+          {
+            "page": 17,
+            "table_indicator": "Table 4:",
+            "sample": "Table detected on page 17; columnar grid flattened into sequential lines"
+          },
+          {
+            "page": 17,
+            "table_indicator": "Table 5:",
+            "sample": "Table detected on page 17; columnar grid flattened into sequential lines"
+          }
+        ],
+        "diagram_artifacts_count": 5,
+        "diagram_artifacts": [
+          {
+            "page": 3,
+            "max_consecutive_single_chars": 18,
+            "sample": "Vertical glyph stacking from diagram/figure labels"
+          },
+          {
+            "page": 7,
+            "max_consecutive_single_chars": 15,
+            "sample": "Vertical glyph stacking from diagram/figure labels"
+          },
+          {
+            "page": 15,
+            "max_consecutive_single_chars": 20,
+            "sample": "Vertical glyph stacking from diagram/figure labels"
+          },
+          {
+            "page": 38,
+            "max_consecutive_single_chars": 17,
+            "sample": "Vertical glyph stacking from diagram/figure labels"
+          },
+          {
+            "page": 39,
+            "max_consecutive_single_chars": 43,
+            "sample": "Vertical glyph stacking from diagram/figure labels"
+          }
+        ]
+      }
+    }
+  },
+  "summary": {
+    "total_pages": 120,
+    "total_characters": 362929,
+    "total_words": 55815,
+    "total_sections_detected": 84,
+    "total_mangled_equations": 3,
+    "total_table_linearizations": 14,
+    "total_diagram_artifacts": 13
+  }
+}

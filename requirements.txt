@@ -1,0 +1,23 @@
+# requirements.txt
+
+# Calling Groq (streaming) and downloading the PDFs
+httpx>=0.27
+
+# Stand-in model server
+fastapi>=0.110
+uvicorn>=0.29
+
+# Ingest: PDF text with page numbers
+pymupdf>=1.24
+
+# Retrieval
+rank_bm25>=0.2.2
+sentence-transformers>=3.0   # bge-small embeddings + optional cross-encoder re-ranker
+numpy>=1.26
+
+# Analysis and tables
+pandas>=2.1
+matplotlib>=3.8              # optional, only if you want plots
+
+# Reading GROQ_API_KEY from a local .env during development
+python-dotenv>=1.0

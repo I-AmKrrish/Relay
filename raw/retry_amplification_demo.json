@@ -1,0 +1,17 @@
+{
+  "timestamp_iso": "2026-11-11T11:41:05.951740+00:00",
+  "offered_requests": 20,
+  "blind_scenario": {
+    "total_calls": 50,
+    "amplification_factor": 2.5,
+    "failures": 10,
+    "duration_seconds": 1.04
+  },
+  "resilient_scenario": {
+    "total_calls": 20,
+    "amplification_factor": 1.0,
+    "successes": 10,
+    "duration_seconds": 15.2,
+    "traffic_reduction_pct": 60.0
+  }
+}

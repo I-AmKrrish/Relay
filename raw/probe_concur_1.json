@@ -1,0 +1,26 @@
+{
+  "request_id": "probe_concur_1",
+  "scenario": "probe_concurrent",
+  "timestamp_iso": "2026-11-10T20:48:10.917616+00:00",
+  "model": "qwen/qwen3.8-27b",
+  "prompt": "Define multi-head attention concisely.",
+  "max_tokens": 30,
+  "status_code": 200,
+  "status": "ok",
+  "first_token_ms": 331.9013000000268,
+  "total_ms": 391.5842000023986,
+  "tokens_in": 20,
+  "tokens_out": 30,
+  "headers": {
+    "date": "Tue, 10 Nov 2026 20:48:11 GMT",
+    "content-type": "text/event-stream",
+    "x-ratelimit-limit-requests": "1000",
+    "x-ratelimit-limit-tokens": "8000",
+    "x-ratelimit-remaining-requests": "995",
+    "x-ratelimit-remaining-tokens": "7909",
+    "x-ratelimit-reset-requests": "7m12s",
+    "x-ratelimit-reset-tokens": "3.179s"
+  },
+  "response_text": "**Multi-head attention** is a mechanism in transformer models that allows the model to jointly attend to information from different representation subspaces at different positions.\n\n",
+  "raw_error": null
+}

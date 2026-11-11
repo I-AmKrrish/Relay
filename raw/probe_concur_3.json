@@ -1,0 +1,26 @@
+{
+  "request_id": "probe_concur_3",
+  "scenario": "probe_concurrent",
+  "timestamp_iso": "2026-11-10T20:48:10.892047+00:00",
+  "model": "qwen/qwen3.8-27b",
+  "prompt": "Define hierarchical sequence modeling concisely.",
+  "max_tokens": 30,
+  "status_code": 200,
+  "status": "ok",
+  "first_token_ms": 295.0392999991891,
+  "total_ms": 359.0824999992037,
+  "tokens_in": 20,
+  "tokens_out": 30,
+  "headers": {
+    "date": "Tue, 10 Nov 2026 20:48:11 GMT",
+    "content-type": "text/event-stream",
+    "x-ratelimit-limit-requests": "1000",
+    "x-ratelimit-limit-tokens": "8000",
+    "x-ratelimit-remaining-requests": "996",
+    "x-ratelimit-remaining-tokens": "7942",
+    "x-ratelimit-reset-requests": "5m45.6s",
+    "x-ratelimit-reset-tokens": "2.28s"
+  },
+  "response_text": "**Hierarchical sequence modeling** is a computational approach that structures sequential data into multiple levels of abstraction, where lower-level units (e.g., phonemes",
+  "raw_error": null
+}

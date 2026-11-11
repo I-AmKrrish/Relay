@@ -1,0 +1,26 @@
+{
+  "request_id": "probe_429_burst",
+  "scenario": "probe_429",
+  "timestamp_iso": "2026-11-10T20:48:12.605169+00:00",
+  "model": "qwen/qwen3.8-27b",
+  "prompt": "List numbers from 1 to 5000",
+  "max_tokens": 8000,
+  "status_code": 200,
+  "status": "ok",
+  "first_token_ms": 402.57150000252295,
+  "total_ms": 1609.0932000006433,
+  "tokens_in": 23,
+  "tokens_out": 620,
+  "headers": {
+    "date": "Tue, 10 Nov 2026 20:48:12 GMT",
+    "content-type": "text/event-stream",
+    "x-ratelimit-limit-requests": "1000",
+    "x-ratelimit-limit-tokens": "8000",
+    "x-ratelimit-remaining-requests": "993",
+    "x-ratelimit-remaining-tokens": "7706",
+    "x-ratelimit-reset-requests": "10m4.8s",
+    "x-ratelimit-reset-tokens": "16.26s"
+  },
+  "response_text": "Listing all numbers from 1 to 5000 in a single response is not feasible due to length constraints. However, I can provide you with a few options depending on what you need:\n\n### Option 1: Python Code to Generate the List\nIf you need to use these numbers in a program, here\u2019s a simple Python snippet:\n\n```python\n# Generate a list of numbers from 1 to 5000\nnumbers = list(range(1, 5001))\n\n# To print them (optional)\n# for num in numbers:\n#     print(num)\n\n# To save to a file\nwith open(\"numbers_1_to_5000.txt\", \"w\") as f:\n    for num in numbers:\n        f.write(f\"{num}\\n\")\n```\n\n### Option 2: CSV Format (First 100 Numbers)\nHere are the first 100 numbers in a comma-separated format. You can easily extend this pattern:\n\n```\n1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100\n```\n\n### Option 3: Downloadable File\nIf you need the full list, I recommend generating it using the Python code above or using a spreadsheet program like Excel:\n1. In Excel, type `1` in cell A1 and `2` in cell A2.\n2. Select both cells and drag the fill handle down to row 5000.\n3. Save the file as a CSV or TXT.\n\nLet me know if you need a specific format (e.g., JSON, SQL insert statements, etc.)!",
+  "raw_error": null
+}

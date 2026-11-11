@@ -1,0 +1,153 @@
+[
+  {
+    "id": "q01",
+    "category": "single_paper",
+    "question": "What is the dimensionality d_model and number of attention heads in the base Transformer model?",
+    "expected_answer": "In the base Transformer model, d_model = 512 and the number of attention heads h = 8 (with dk = dv = 64).",
+    "expected_citations": ["[Attention Is All You Need, Sec 3.2.2 Multi-Head Attention, p. 5]"],
+    "is_refusal": false,
+    "paper_keys": ["attention"]
+  },
+  {
+    "id": "q02",
+    "category": "single_paper",
+    "question": "What is the sampling frequency and frame rate of the Mimi neural audio codec?",
+    "expected_answer": "Mimi operates at an input/output audio sampling rate of 24 kHz and produces a frame rate of 12.5 Hz (downsampling by a factor of 1920).",
+    "expected_citations": ["[Moshi: a speech-text foundation model for real-time dialogue, Sec 3.3 Audio Tokenization, p. 8]"],
+    "is_refusal": false,
+    "paper_keys": ["moshi"]
+  },
+  {
+    "id": "q03",
+    "category": "single_paper",
+    "question": "What is the objective of the ratio loss in Dynamic Chunking?",
+    "expected_answer": "The ratio loss guides the boundary predictor (routing module) to adhere to a targeted compression ratio (average chunk size) without explicit tokenization supervision.",
+    "expected_citations": ["[Dynamic Chunking for End-to-End Hierarchical Sequence Modeling, Sec 2.2.3 Ratio Loss, p. 8]"],
+    "is_refusal": false,
+    "paper_keys": ["dynamic_chunking"]
+  },
+  {
+    "id": "q04",
+    "category": "cross_paper",
+    "question": "How does H-Net's sequence processing complexity compare to standard Transformer self-attention complexity with respect to input sequence length n?",
+    "expected_answer": "Standard Transformer self-attention per layer has O(n^2 * d) complexity with O(1) sequential operations. H-Net reduces byte-level sequence length by chunking into hierarchical levels, reducing the quadratic attention overhead over the original byte sequence length.",
+    "expected_citations": [
+      "[Attention Is All You Need, Sec 4 Why Self-Attention, p. 6]",
+      "[Dynamic Chunking for End-to-End Hierarchical Sequence Modeling, Sec 2 H-Net Architecture, p. 4]"
+    ],
+    "is_refusal": false,
+    "paper_keys": ["attention", "dynamic_chunking"]
+  },
+  {
+    "id": "q05",
+    "category": "cross_paper",
+    "question": "Both Moshi and Dynamic Chunking address sequence representation without standard words. How do their token granularities compare (audio frames vs raw bytes)?",
+    "expected_answer": "Moshi compresses continuous 24 kHz audio waveforms into discrete acoustic/semantic tokens at 12.5 Hz using the Mimi RVQ codec. Dynamic Chunking eliminates word/BPE tokenizers by processing text directly at the byte level with dynamic learned chunk boundaries.",
+    "expected_citations": [
+      "[Moshi: a speech-text foundation model for real-time dialogue, Sec 3.3 Audio Tokenization, p. 9]",
+      "[Dynamic Chunking for End-to-End Hierarchical Sequence Modeling, Sec 1 Introduction, p. 1]"
+    ],
+    "is_refusal": false,
+    "paper_keys": ["moshi", "dynamic_chunking"]
+  },
+  {
+    "id": "q06",
+    "category": "numeric_table",
+    "question": "What BLEU score was achieved by the Transformer (big) model on the WMT 2014 English-to-German translation test in Table 2?",
+    "expected_answer": "The Transformer (big) model achieved a BLEU score of 28.4 on the WMT 2014 English-to-German translation test.",
+    "expected_citations": ["[Attention Is All You Need, Sec 6.1 Machine Translation, p. 8]"],
+    "is_refusal": false,
+    "paper_keys": ["attention"]
+  },
+  {
+    "id": "q07",
+    "category": "numeric_table",
+    "question": "In Table 4 of the Moshi paper, how does Mimi compare to the RVQGAN baseline on subjective MUSHRA quality?",
+    "expected_answer": "Mimi achieved a MUSHRA score of 78.4 (at 1.1 kbps) or higher across configurations, outperforming RVQGAN which scored significantly lower under comparable bitrates.",
+    "expected_citations": ["[Moshi: a speech-text foundation model for real-time dialogue, Sec 5.2 Audio Tokenization, p. 23]"],
+    "is_refusal": false,
+    "paper_keys": ["moshi"]
+  },
+  {
+    "id": "q08",
+    "category": "numeric_table",
+    "question": "In Table 1 of the Dynamic Chunking paper, how does the byte-level H-Net compare to compute-matched token-based Transformers?",
+    "expected_answer": "The byte-level H-Net matches or slightly outperforms compute- and data-matched token-based Transformers in bits-per-character (BPC) and downstream accuracy without using a BPE tokenizer.",
+    "expected_citations": ["[Dynamic Chunking for End-to-End Hierarchical Sequence Modeling, Sec 3.1 Language Modeling, p. 11]"],
+    "is_refusal": false,
+    "paper_keys": ["dynamic_chunking"]
+  },
+  {
+    "id": "q09",
+    "category": "tricky_wording",
+    "question": "In Scaled Dot-Product Attention, what is the exact mathematical scaling factor applied to the query-key dot products before the softmax?",
+    "expected_answer": "The scaling factor is 1 / sqrt(d_k), dividing the dot products by the square root of the key dimension d_k.",
+    "expected_citations": ["[Attention Is All You Need, Sec 3.2.1 Scaled Dot-Product Attention, p. 4]"],
+    "is_refusal": false,
+    "paper_keys": ["attention"]
+  },
+  {
+    "id": "q010",
+    "category": "tricky_wording",
+    "question": "What is the function of the 'Inner Monologue' in Moshi, and why is it delayed relative to the user audio?",
+    "expected_answer": "The Inner Monologue models text tokens as an intermediate step before generating speech tokens, predicting text slightly ahead of speech synthesis to align semantic and acoustic reasoning.",
+    "expected_citations": ["[Moshi: a speech-text foundation model for real-time dialogue, Sec 3.4.4 Inner Monologue, p. 15]"],
+    "is_refusal": false,
+    "paper_keys": ["moshi"]
+  },
+  {
+    "id": "q11",
+    "category": "tricky_wording",
+    "question": "How does Dynamic Chunking backpropagate gradients through discrete boundary decisions without explicit boundary labels?",
+    "expected_answer": "Dynamic Chunking uses a Straight-Through Estimator (STE) and a smoothing module to allow continuous gradient flow during training while making hard discrete chunking decisions.",
+    "expected_citations": ["[Dynamic Chunking for End-to-End Hierarchical Sequence Modeling, Sec 2.2 Dynamic Chunking (DC), p. 6]"],
+    "is_refusal": false,
+    "paper_keys": ["dynamic_chunking"]
+  },
+  {
+    "id": "q12",
+    "category": "refusal",
+    "question": "What optimizer and learning rate schedule was used to train the Llama 3 405B model?",
+    "expected_answer": "The papers do not say.",
+    "expected_citations": [],
+    "is_refusal": true,
+    "paper_keys": []
+  },
+  {
+    "id": "q13",
+    "category": "refusal",
+    "question": "What is the token vocabulary size and number of mel-filterbank bins in OpenAI's Whisper model?",
+    "expected_answer": "The papers do not say.",
+    "expected_citations": [],
+    "is_refusal": true,
+    "paper_keys": []
+  },
+  {
+    "id": "q14",
+    "category": "refusal",
+    "question": "How many total GPU hours were spent pre-training the Helium 7B text model?",
+    "expected_answer": "The papers do not say.",
+    "expected_citations": [],
+    "is_refusal": true,
+    "paper_keys": []
+  },
+  {
+    "id": "q15",
+    "category": "refusal",
+    "question": "Does Dynamic Chunking support masked autoencoding for visual 3D point cloud classification?",
+    "expected_answer": "The papers do not say.",
+    "expected_citations": [],
+    "is_refusal": true,
+    "paper_keys": []
+  },
+  {
+    "id": "q16",
+    "category": "refusal",
+    "question": "What was the BLEU score achieved by the original 2017 Transformer on Chinese-to-English translation?",
+    "expected_answer": "The papers do not say.",
+    "expected_citations": [],
+    "is_refusal": true,
+    "paper_keys": []
+  }
+]
+

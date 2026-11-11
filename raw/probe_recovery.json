@@ -1,0 +1,26 @@
+{
+  "request_id": "probe_recovery",
+  "scenario": "probe_recovery",
+  "timestamp_iso": "2026-11-10T20:48:13.885638+00:00",
+  "model": "qwen/qwen3.8-27b",
+  "prompt": "Ping: answer with 'pong'.",
+  "max_tokens": 10,
+  "status_code": 200,
+  "status": "ok",
+  "first_token_ms": 258.3902999976999,
+  "total_ms": 260.89519999732147,
+  "tokens_in": 19,
+  "tokens_out": 2,
+  "headers": {
+    "date": "Tue, 10 Nov 2026 20:48:14 GMT",
+    "content-type": "text/event-stream",
+    "x-ratelimit-limit-requests": "1000",
+    "x-ratelimit-limit-tokens": "8000",
+    "x-ratelimit-remaining-requests": "992",
+    "x-ratelimit-remaining-tokens": "7301",
+    "x-ratelimit-reset-requests": "11m31.2s",
+    "x-ratelimit-reset-tokens": "40.8s"
+  },
+  "response_text": "pong",
+  "raw_error": null
+}

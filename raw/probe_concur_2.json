@@ -1,0 +1,26 @@
+{
+  "request_id": "probe_concur_2",
+  "scenario": "probe_concurrent",
+  "timestamp_iso": "2026-11-10T20:48:10.984890+00:00",
+  "model": "qwen/qwen3.8-27b",
+  "prompt": "Define residual vector quantization concisely.",
+  "max_tokens": 30,
+  "status_code": 200,
+  "status": "ok",
+  "first_token_ms": 389.3610999984958,
+  "total_ms": 455.34869999755756,
+  "tokens_in": 21,
+  "tokens_out": 30,
+  "headers": {
+    "date": "Tue, 10 Nov 2026 20:48:11 GMT",
+    "content-type": "text/event-stream",
+    "x-ratelimit-limit-requests": "1000",
+    "x-ratelimit-limit-tokens": "8000",
+    "x-ratelimit-remaining-requests": "994",
+    "x-ratelimit-remaining-tokens": "7873",
+    "x-ratelimit-reset-requests": "8m38.4s",
+    "x-ratelimit-reset-tokens": "4.08s"
+  },
+  "response_text": "**Residual Vector Quantization (RVQ)** is a multi-stage quantization technique used to approximate a high-dimensional vector with a sequence of lower-dimensional",
+  "raw_error": null
+}

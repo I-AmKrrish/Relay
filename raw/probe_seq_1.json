@@ -1,0 +1,26 @@
+{
+  "request_id": "probe_seq_1",
+  "scenario": "probe_seq",
+  "timestamp_iso": "2026-11-10T20:48:08.122760+00:00",
+  "model": "qwen/qwen3.8-27b",
+  "prompt": "Explain self-attention mechanism in 15 words.",
+  "max_tokens": 35,
+  "status_code": 200,
+  "status": "ok",
+  "first_token_ms": 468.78380000271136,
+  "total_ms": 529.7363000026962,
+  "tokens_in": 24,
+  "tokens_out": 15,
+  "headers": {
+    "date": "Tue, 10 Nov 2026 20:48:08 GMT",
+    "content-type": "text/event-stream",
+    "x-ratelimit-limit-requests": "1000",
+    "x-ratelimit-limit-tokens": "8000",
+    "x-ratelimit-remaining-requests": "999",
+    "x-ratelimit-remaining-tokens": "7941",
+    "x-ratelimit-reset-requests": "1m26.4s",
+    "x-ratelimit-reset-tokens": "442ms"
+  },
+  "response_text": "Each token attends to all others, weighting relevance to capture context dynamically.",
+  "raw_error": null
+}

@@ -1,0 +1,29 @@
+[
+  {
+    "setting": "Setting A (256-tok, top-3 BM25)",
+    "setting_id": "bm25_k3_c256",
+    "quality_accuracy_pct": 56.25,
+    "avg_tokens_per_answer": 1923.6875,
+    "avg_ttft_ms": 47.97506500021882,
+    "avg_total_ms": 161.76342500011742,
+    "cheap_under_limit": true
+  },
+  {
+    "setting": "Setting B (512-tok, top-5 Dense)",
+    "setting_id": "dense_k5_c512",
+    "quality_accuracy_pct": 37.5,
+    "avg_tokens_per_answer": 2854.3125,
+    "avg_ttft_ms": 47.064720000253146,
+    "avg_total_ms": 146.68395000012424,
+    "cheap_under_limit": false
+  },
+  {
+    "setting": "Setting C (256-tok, top-8 Rerank)",
+    "setting_id": "rerank_k3_c256",
+    "quality_accuracy_pct": 56.25,
+    "avg_tokens_per_answer": 2028.3125,
+    "avg_ttft_ms": 45.61766749998242,
+    "avg_total_ms": 192.19507500019972,
+    "cheap_under_limit": true
+  }
+]
