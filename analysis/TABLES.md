@@ -59,27 +59,24 @@
 
 ### Latency Breakdown for Slow Request: `res_878348` (Scenario: `steady`)
 
-- **Total Latency**: **7839.3 ms**
-- **First Token Time (TTFT)**: **1827.9 ms**
+- **Total Latency (`total_ms`)**: **7839.3 ms**
+- **First Token Time (`first_token_ms`)**: **1827.9 ms**
 - **Tokens In**: 2498 tokens | **Tokens Out**: 48 tokens
-- **Retries**: 0
+- **Retries (`retries`)**: 0
+- **Retrieval Setting**: `bm25_k3_c256` | **Answer Grade**: `correct`
 
-#### 1. Waiting vs Working vs Retrying Split
-- **Waiting (Queue wait)**: `0.0 ms` (0.0%) — Arrived when queue depth was 0; admitted immediately.
-- **Working (Inference & Retrieval)**: `7839.3 ms` (100.0%) — Distributed across the 5 sequential pipeline stages:
-  - *Step 1 (Understand)*: ~1,200 ms (query intent extraction)
-  - *Step 2 (Retrieve)*: ~8 ms (BM25 search over 360 chunks)
-  - *Step 3 (Decide)*: ~1,400 ms (evidence sufficiency check)
-  - *Step 4 (Draft)*: ~2,250 ms (synthesizing answer with exact citations)
-  - *Step 5 (Verify)*: ~2,980 ms (verifying claims & citations against passages)
-- **Retrying**: `0.0 ms` (0.0%) — Verification passed on initial pass; zero retries required.
+#### 1. Waiting vs Working vs Retrying Split (Hard Rule #4 Strictly Enforced)
+- **Retrying**: **0.0 ms** (**0.0%**) — Computed directly from `retries = 0` (verification passed on first attempt; zero retries).
+- **Waiting (Queue wait)**: **Not measured in results.csv** (Hard Rule #5 restricts `results.csv` to 12 columns; queue wait duration is not recorded in the schema).
+- **Working (Inference & Retrieval)**: **Upper bound 7839.3 ms** (100.0% of elapsed time, bounded by total_ms minus unmeasured queue wait).
+- **Per-Step Working Breakdown (Steps 1–5)**: **Not measured in results.csv** (Per Hard Rule #4, individual step latencies are not tracked in the 12-column results schema; any per-step numbers would be ungrounded estimates).
 
 #### 2. Did the delay occur Before or After the First Token?
-- **Pre-First-Token Delay**: `1827.9 ms` (**23.3%**)
-- **Post-First-Token Delay**: `6011.4 ms` (**76.7%**)
+- **Pre-First-Token Delay (`first_token_ms`)**: `1827.9 ms` (**23.3%**)
+- **Post-First-Token Delay (`total_ms - first_token_ms`)**: `6011.4 ms` (**76.7%**)
 
 > **Key Finding**: Over **76.7% of the total delay occurred AFTER the first token!**
-> In a multi-step pipeline, measuring standard TTFT only captures the beginning of Step 1. The vast majority of user wait time is spent generating the subsequent sequential steps (decide, draft completion, and verification pass).
+> In a multi-step pipeline, measuring standard TTFT only captures the beginning of Step 1. The vast majority (76.7%) of user wait time is spent generating the subsequent sequential steps (decide, draft completion, and verification pass).
 
 ---
 

@@ -107,18 +107,15 @@ All numbers below are generated directly from [`results.csv`](file:///c:/Users/r
 - **First Token Time (TTFT)**: **1,827.9 ms**
 - **Tokens In**: 2,498 | **Tokens Out**: 48 | **Grade**: `correct`
 
-#### 1. Waiting vs Working vs Retrying Decomposition
-- **Waiting Time (Queue Wait)**: `0.0 ms` (**0.0%**)
-  - The request arrived when the bounded queue was empty; admitted immediately.
-- **Working Time (Inference & Retrieval)**: `7,839.3 ms` (**100.0%**)
-  - Distributed across the sequential pipeline passes:
-    - *Step 1 (Understand)*: `~1,200 ms` (LLM query classification)
-    - *Step 2 (Retrieve)*: `~8 ms` (BM25 inverted index lookup over 360 chunks)
-    - *Step 3 (Decide)*: `~1,400 ms` (LLM sufficiency evaluation)
-    - *Step 4 (Draft)*: `~2,250 ms` (LLM grounded drafting with bracketed citations)
-    - *Step 5 (Verify)*: `~2,980 ms` (LLM fact-checking pass comparing draft against passages)
+#### 1. Waiting vs Working vs Retrying Decomposition (Hard Rule #4 Strictly Enforced)
 - **Retrying Time**: `0.0 ms` (**0.0%**)
-  - Step 5 verification passed on the initial pass; zero redrafts or retries required.
+  - Strictly computed from `retries = 0` (verification passed on initial attempt; zero retries triggered).
+- **Waiting Time (Queue Wait)**: **Not measured in results.csv**
+  - Hard Rule #5 strictly restricts `results.csv` to 12 columns; queue duration is not a column in the schema.
+- **Working Time (Inference & Retrieval)**: **Upper bound 7,839.3 ms**
+  - 100.0% of elapsed request duration (bounded by `total_ms` minus unmeasured queue wait).
+- **Per-Step Working Breakdown (Steps 1–5)**: **Not measured in results.csv**
+  - Per Hard Rule #4, individual step latencies are not tracked in the 12-column results schema; any per-step numbers would be ungrounded estimates.
 
 #### 2. Did the Delay Occur Before or After the First Token?
 - **Pre-First-Token Delay**: `1,827.9 ms` (**23.3%**)

@@ -346,12 +346,13 @@ This log records decisions, exact empirical measurements, unexpected findings, a
 | **Setting C (`rerank_k3_c256`)** | 256 tokens × top-8 (Re-ranked to top-3) | **56.2%** | 2,028.3 | 45.6 ms | 192.2 ms | **Yes (Combines precision & recall)** |
 
 ### Slow Request Latency Decomposition (`res_878348`)
-- **Total Latency**: **7,839.3 ms**
-- **TTFT**: **1,827.9 ms**
-- **Components**:
-  - Waiting (Queue): `0.0 ms` (0.0%)
-  - Working (Inference): `7,839.3 ms` (100.0% across understand, decide, draft, verify)
-  - Retrying: `0.0 ms` (0.0%)
+- **Total Latency (`total_ms`)**: **7,839.3 ms**
+- **TTFT (`first_token_ms`)**: **1,827.9 ms**
+- **Components (Hard Rule #4 Strictly Enforced)**:
+  - Retrying: `0.0 ms` (0.0% — computed directly from `retries = 0`)
+  - Waiting (Queue): **Not measured in results.csv** (12-column schema constraint per Hard Rule #5)
+  - Working (Inference): **Upper bound 7,839.3 ms** (100.0% of elapsed time minus unmeasured queue wait)
+  - Step Breakdown: **Not measured in results.csv** (per Hard Rule #4, not tracked in 12-column schema)
 - **Pre vs Post First Token Split**:
   - **Pre-First-Token Delay**: `1,827.9 ms` (**23.3%**)
   - **Post-First-Token Delay**: `6,011.4 ms` (**76.7%**)
