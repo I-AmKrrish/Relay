@@ -408,7 +408,8 @@ class RelayPipeline:
                 verification_passed=True,
                 loop_count=loop_count,
             )
-            log_result_to_csv(res)
+            if log_to_csv_now:
+                log_result_to_csv(res)
             return res
 
         # Step 4: Draft Answer

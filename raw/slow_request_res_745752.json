@@ -1,0 +1,32 @@
+{
+  "request_id": "res_745752",
+  "scenario": "resilient_run",
+  "source": "stand-in",
+  "start_time": "2026-11-11T12:38:58.745934+00:00",
+  "total_ms": 7459.3,
+  "first_token_ms": 1514.2,
+  "pre_ttft_delay_ms": 1514.2,
+  "post_ttft_delay_ms": 5945.1,
+  "pre_ttft_pct": 20.3,
+  "post_ttft_pct": 79.7,
+  "retries": 0,
+  "retrying_ms": 0.0,
+  "tokens_in": 2925,
+  "tokens_out": 43,
+  "retrieval_setting": "bm25_k3_c256",
+  "answer_grade": "wrong",
+  "status": "ok",
+  "rule_4_computability_audit": {
+    "computable_from_results_csv": [
+      "total_ms (7459.3 ms)",
+      "first_token_ms (1514.2 ms)",
+      "pre_ttft_delay_ms (1514.2 ms, 20.3%)",
+      "post_ttft_delay_ms (5945.1 ms, 79.7%)",
+      "retrying_ms (0.0 ms derived from retries == 0)"
+    ],
+    "not_measured_in_results_csv": [
+      "queue_wait_ms (results.csv schema restricted to 12 columns per Rule 5)",
+      "step_level_working_ms (individual pipeline step latencies not present in results.csv schema)"
+    ]
+  }
+}

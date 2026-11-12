@@ -293,20 +293,22 @@ This log records decisions, exact empirical measurements, unexpected findings, a
 
 | Scenario | Offered | OK % | Shed % | Timeout % | Rate Limited % | Degraded % | p50 Latency | p95 Latency | Avg Retries |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **`steady`** | 15 | 46.7% | 0.0% | 53.3% | 0.0% | 0.0% | 7,839.3 ms | 8,101.5 ms | 0.33 |
+| **`steady`** | 5 | 100.0% | 0.0% | 0.0% | 0.0% | 0.0% | 1,485.4 ms | 2,871.3 ms | 0.00 |
 | **`burst`** | 26 | 7.7% | 19.2% (5) | 73.1% (19) | 0.0% | 11.5% (3) | 10,238.7 ms | 18,759.0 ms | 0.00 |
 | **`sustained_overload`**| 20 | 0.0% | 0.0% | 100.0% | 0.0% | 0.0% | 9,316.8 ms | 10,514.4 ms | 0.00 |
 | **`limit_halved`** | 11 | 18.2% | 0.0% | 81.8% | 0.0% | 0.0% | 9,302.3 ms | 10,628.1 ms | 0.00 |
 | **`daily_exhausted`** | 5 | 0.0% | 0.0% | 0.0% | 100.0% (5) | 0.0% | 0.0 ms | 0.0 ms | 0.00 |
 
 ### Key Engineering Insights
-1. **Immediate Load Shedding Protects System Stability**:
+1. **Paced Steady Baseline Achieves 100% Reliability**:
+   - Pacing steady traffic at 30.0s intervals ($\sim 2.5\text{ req/min}$) keeps cumulative token usage safely below the 8,000 TPM limit ($\le 5,000\text{ TPM}$), resulting in a 100% success rate, 0% timeouts, and 1,485.4 ms median total latency.
+2. **Immediate Load Shedding Protects System Stability**:
    - In the `burst` scenario (26 simultaneous requests), exactly **5 excess requests** were shed immediately upon arrival (`retrieval_setting="shed"`).
    - These shed requests consumed 0 tokens and took 0 ms, preventing unbounded queue growth and memory exhaustion.
-2. **Multi-Step Latency Compounding under Concurrency**:
+3. **Multi-Step Latency Compounding under Concurrency**:
    - Under `sustained_overload` and `burst`, as server in-flight load exceeded 3, the calibrated concurrency slowdown ($\alpha = 0.15$) increased individual LLM step latencies.
    - Because our pipeline executes 4–5 sequential LLM passes (understand, decide, draft, verify, redraft), individual step slowdowns compound multiplicatively. When cumulative latency crossed 8.0s, the resilience engine cleanly terminated the requests with `status="timeout"` to enforce the Nielsen Norman human abandonment boundary.
-3. **Zero-Token Daily Ceiling Refusal**:
+4. **Zero-Token Daily Ceiling Refusal**:
    - Under `daily_exhausted`, requests were intercepted before invoking the retrieval or inference models, consuming exactly **0 tokens** while returning transparent midnight UTC reset guidance.
 
 
@@ -316,7 +318,7 @@ This log records decisions, exact empirical measurements, unexpected findings, a
 
 ### Artifacts Built
 - Created `analysis/tables.py` and generated markdown artifact `analysis/TABLES.md`.
-- Read from `results.csv` (144 validated execution rows, 100% compliant with Hard Rule #5) to synthesize Tables 1, 2a, 2b, and 3.
+- Read from `results.csv` (136 validated execution rows, 100% compliant with Hard Rule #5) to synthesize Tables 1, 2a, 2b, and 3.
 
 ### Table 1: Model Service & Rate Limit Parameters (`qwen/qwen3.8-27b`)
 - **RPM**: 30 req/min (High confidence, observed in `x-ratelimit-limit-requests`)
@@ -331,7 +333,7 @@ This log records decisions, exact empirical measurements, unexpected findings, a
 
 | Scenario | Offered Rate | Duration | TTFT p50 | Total p50 | Success % | Rate Limited % | Timeout/Drop % | Peak Queue | Tokens/Ans | Cost/1k Ans |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **`steady`** | 2.6 req/m | 302.3s | 909.6 ms | 7,840.8 ms | 38.5% | 0.0% | 61.5% | 1 | 1,998.4 | $0.1011 |
+| **`steady`** | 2.5 req/m | 121.5s | 700.8 ms | 1,485.4 ms | 100.0% | 0.0% | 0.0% | 1 | 1,728.6 | $0.0874 |
 | **`burst`** | 89.4 req/m | 16.8s | 3,507.5 ms | 10,419.9 ms | 4.0% | 0.0% | 96.0% (5 shed) | 20 | 1,042.0 | $0.0529 |
 | **`sustained_overload`** | 32.9 req/m | 36.5s | 0.0 ms | 9,316.8 ms | 0.0% | 0.0% | 100.0% | 20 | 5.4 | $0.0003 |
 | **`limit_halved`** | 31.1 req/m | 19.3s | 4,290.3 ms | 9,335.5 ms | 10.0% | 0.0% | 90.0% | 4 | 921.0 | $0.0468 |
@@ -345,18 +347,18 @@ This log records decisions, exact empirical measurements, unexpected findings, a
 | **Setting B (`dense_k5_c512`)** | 512 tokens × top-5 (Dense BGE) | **37.5%** | 2,854.3 | 47.1 ms | 146.7 ms | **No (48% more tokens; dilutes tables)** |
 | **Setting C (`rerank_k3_c256`)** | 256 tokens × top-8 (Re-ranked to top-3) | **56.2%** | 2,028.3 | 45.6 ms | 192.2 ms | **Yes (Combines precision & recall)** |
 
-### Slow Request Latency Decomposition (`res_878348`)
-- **Total Latency (`total_ms`)**: **7,839.3 ms**
-- **TTFT (`first_token_ms`)**: **1,827.9 ms**
+### Slow Request Latency Decomposition (`res_745752`)
+- **Total Latency (`total_ms`)**: **7,459.3 ms**
+- **TTFT (`first_token_ms`)**: **1,514.2 ms**
 - **Components (Hard Rule #4 Strictly Enforced)**:
   - Retrying: `0.0 ms` (0.0% — computed directly from `retries = 0`)
   - Waiting (Queue): **Not measured in results.csv** (12-column schema constraint per Hard Rule #5)
-  - Working (Inference): **Upper bound 7,839.3 ms** (100.0% of elapsed time minus unmeasured queue wait)
+  - Working (Inference): **Upper bound 7,459.3 ms** (100.0% of elapsed time minus unmeasured queue wait)
   - Step Breakdown: **Not measured in results.csv** (per Hard Rule #4, not tracked in 12-column schema)
 - **Pre vs Post First Token Split**:
-  - **Pre-First-Token Delay**: `1,827.9 ms` (**23.3%**)
-  - **Post-First-Token Delay**: `6,011.4 ms` (**76.7%**)
-- **Key Insight**: Over **76.7% of total latency occurs AFTER the first token is emitted**. In multi-stage agentic/RAG architectures, standard TTFT captures only Step 1; the user's perception of slowness is driven by downstream multi-step completion phases.
+  - **Pre-First-Token Delay**: `1,514.2 ms` (**20.3%**)
+  - **Post-First-Token Delay**: `5,945.1 ms` (**79.7%**)
+- **Key Insight**: Over **79.7% of total latency occurs AFTER the first token is emitted**. In multi-stage agentic/RAG architectures, standard TTFT captures only Step 1; the user's perception of slowness is driven by downstream multi-step completion phases.
 
 ### Three Non-Obvious Empirical Surprises
 1. **512-Token Chunks Produced Worse Accuracy Than 256-Token Chunks (37.5% vs 56.2%)**:

@@ -1,77 +1,18 @@
 {
-  "steady": {
-    "total_requests": 15,
-    "ok": 7,
-    "rate_limited": 0,
-    "timeout": 8,
-    "error": 0,
-    "shed": 0,
-    "degraded": 0,
-    "success_rate_pct": 46.7,
-    "p50_total_ms": 7839.3,
-    "p95_total_ms": 8101.5,
-    "avg_retries": 0.33,
-    "avg_tokens_in": 814.7,
-    "avg_tokens_out": 18.1
-  },
-  "burst": {
-    "total_requests": 26,
-    "ok": 2,
-    "rate_limited": 0,
-    "timeout": 19,
-    "error": 5,
-    "shed": 5,
-    "degraded": 3,
-    "success_rate_pct": 7.7,
-    "p50_total_ms": 10238.7,
-    "p95_total_ms": 18759.0,
-    "avg_retries": 0.0,
-    "avg_tokens_in": 116.3,
-    "avg_tokens_out": 2.6
-  },
-  "sustained_overload": {
-    "total_requests": 20,
-    "ok": 0,
-    "rate_limited": 0,
-    "timeout": 20,
-    "error": 0,
-    "shed": 0,
-    "degraded": 0,
-    "success_rate_pct": 0.0,
-    "p50_total_ms": 9316.8,
-    "p95_total_ms": 10514.4,
-    "avg_retries": 0.0,
-    "avg_tokens_in": 5.1,
-    "avg_tokens_out": 0.3
-  },
-  "limit_halved": {
-    "total_requests": 11,
-    "ok": 2,
-    "rate_limited": 0,
-    "timeout": 9,
-    "error": 0,
-    "shed": 0,
-    "degraded": 0,
-    "success_rate_pct": 18.2,
-    "p50_total_ms": 9302.3,
-    "p95_total_ms": 10628.1,
-    "avg_retries": 0.0,
-    "avg_tokens_in": 162.9,
-    "avg_tokens_out": 4.5
-  },
-  "daily_exhausted": {
-    "total_requests": 5,
-    "ok": 0,
-    "rate_limited": 5,
-    "timeout": 0,
-    "error": 0,
-    "shed": 0,
-    "degraded": 0,
-    "success_rate_pct": 0.0,
-    "p50_total_ms": 0.0,
-    "p95_total_ms": 0.0,
-    "avg_retries": 0.0,
-    "avg_tokens_in": 0.0,
-    "avg_tokens_out": 0.0
+  "timestamp_utc": "2026-11-12T14:59:23.980099+00:00",
+  "backend": "stand-in",
+  "summary": {
+    "steady": {
+      "total_offered": 5,
+      "ok_count": 5,
+      "rate_limited_count": 0,
+      "timeout_count": 0,
+      "error_count": 0,
+      "shed_count": 0,
+      "degraded_count": 0,
+      "avg_retries": 0.0,
+      "p50_total_ms": 1485.4,
+      "success_rate_pct": 100.0
+    }
   }
 }

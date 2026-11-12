@@ -130,8 +130,13 @@ class LoadGenerator:
     # --------------------------------------------------------------------------
     # Scenario 1: Steady
     # --------------------------------------------------------------------------
-    async def run_steady(self, num_requests: int = 10, interval_seconds: float = 2.0) -> List[PipelineResult]:
-        """Steady traffic below limit: 1 request every interval_seconds."""
+    async def run_steady(self, num_requests: int = 5, interval_seconds: float = 30.0) -> List[PipelineResult]:
+        """
+        Steady traffic below rate and token limits: 1 request every interval_seconds.
+        With compound multi-step pipelines (~2,500 tokens per request),
+        staying below Groq's 8,000 TPM limit requires pacing at 2 requests/min (30s interval),
+        ensuring at most 2 requests ever overlap inside the 60-second sliding window (~5,000 tokens < 8,000 TPM).
+        """
         print(f"\n{'='*60}")
         print(f"--- Running Scenario: STEADY ({num_requests} requests, 1 every {interval_seconds}s) ---")
         print(f"{'='*60}")
@@ -358,7 +363,7 @@ async def main():
     all_results: Dict[str, List[PipelineResult]] = {}
 
     if args.scenario in ("steady", "all"):
-        n = args.num_requests or 10
+        n = args.num_requests or 5
         all_results["steady"] = await gen.run_steady(num_requests=n)
 
     if args.scenario in ("burst", "all"):

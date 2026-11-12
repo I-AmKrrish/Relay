@@ -357,7 +357,7 @@ def analyze_slow_request(df: pd.DataFrame, target_req_id: str = "res_878348") ->
         f"- **Post-First-Token Delay (`total_ms - first_token_ms`)**: `{post_ttft_ms:.1f} ms` (**{post_ttft_pct:.1f}%**)",
         "",
         f"> **Key Finding**: Over **{post_ttft_pct:.1f}% of the total delay occurred AFTER the first token!**",
-        "> In a multi-step pipeline, measuring standard TTFT only captures the beginning of Step 1. The vast majority (76.7%) of user wait time is spent generating the subsequent sequential steps (decide, draft completion, and verification pass).",
+        f"> In a multi-step pipeline, measuring standard TTFT only captures the beginning of Step 1. The vast majority ({post_ttft_pct:.1f}%) of user wait time is spent generating subsequent sequential steps (decide, draft completion, and verification pass).",
     ]
     return "\n".join(lines)
 

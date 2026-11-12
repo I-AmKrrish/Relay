@@ -22,7 +22,7 @@
 
 | Scenario | Offered Rate | Duration (s) | TTFT p50 (ms) | TTFT p95 (ms) | TTFT p99 (ms) | Total p50 (ms) | Total p95 (ms) | Total p99 (ms) |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **`steady`** | 2.6 req/m | 302.3s | 909.6 | 1683.0 | 1798.9 | 7840.8 | 8108.3 | 8140.9 |
+| **`steady`** | 2.5 req/m | 121.5s | 700.8 | 766.2 | 767.1 | 1485.4 | 2871.3 | 2895.4 |
 | **`burst`** | 89.4 req/m | 16.8s | 3507.5 | 3507.5 | 3507.5 | 10419.9 | 18805.9 | 19843.1 |
 | **`sustained_overload`** | 32.9 req/m | 36.5s | 0.0 | 0.0 | 0.0 | 9316.8 | 10514.4 | 10985.2 |
 | **`limit_halved`** | 31.1 req/m | 19.3s | 4290.3 | 4290.3 | 4290.3 | 9335.5 | 10635.2 | 10685.8 |
@@ -35,7 +35,7 @@
 
 | Scenario | Success % | Rate Limited % | Timeout/Drop % | Retries / Req | Peak Queue | Tokens / Ans | Cost / 1k Ans (Commercial) |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **`steady`** | 38.5% | 0.0% | 61.5% | 0.38 | 1 | 1998.4 | $0.1011 |
+| **`steady`** | 100.0% | 0.0% | 0.0% | 0.00 | 1 | 1728.6 | $0.0874 |
 | **`burst`** | 4.0% | 0.0% | 96.0% | 0.00 | 20 | 1042.0 | $0.0529 |
 | **`sustained_overload`** | 0.0% | 0.0% | 100.0% | 0.00 | 20 | 5.4 | $0.0003 |
 | **`limit_halved`** | 10.0% | 0.0% | 90.0% | 0.00 | 4 | 921.0 | $0.0468 |
@@ -57,26 +57,26 @@
 
 ---
 
-### Latency Breakdown for Slow Request: `res_878348` (Scenario: `steady`)
+### Latency Breakdown for Slow Request: `res_745752` (Scenario: `resilient_run`)
 
-- **Total Latency (`total_ms`)**: **7839.3 ms**
-- **First Token Time (`first_token_ms`)**: **1827.9 ms**
-- **Tokens In**: 2498 tokens | **Tokens Out**: 48 tokens
+- **Total Latency (`total_ms`)**: **7459.3 ms**
+- **First Token Time (`first_token_ms`)**: **1514.2 ms**
+- **Tokens In**: 2925 tokens | **Tokens Out**: 43 tokens
 - **Retries (`retries`)**: 0
-- **Retrieval Setting**: `bm25_k3_c256` | **Answer Grade**: `correct`
+- **Retrieval Setting**: `bm25_k3_c256` | **Answer Grade**: `wrong`
 
 #### 1. Waiting vs Working vs Retrying Split (Hard Rule #4 Strictly Enforced)
 - **Retrying**: **0.0 ms** (**0.0%**) — Computed directly from `retries = 0` (verification passed on first attempt; zero retries).
 - **Waiting (Queue wait)**: **Not measured in results.csv** (Hard Rule #5 restricts `results.csv` to 12 columns; queue wait duration is not recorded in the schema).
-- **Working (Inference & Retrieval)**: **Upper bound 7839.3 ms** (100.0% of elapsed time, bounded by total_ms minus unmeasured queue wait).
+- **Working (Inference & Retrieval)**: **Upper bound 7459.3 ms** (100.0% of elapsed time, bounded by total_ms minus unmeasured queue wait).
 - **Per-Step Working Breakdown (Steps 1–5)**: **Not measured in results.csv** (Per Hard Rule #4, individual step latencies are not tracked in the 12-column results schema; any per-step numbers would be ungrounded estimates).
 
 #### 2. Did the delay occur Before or After the First Token?
-- **Pre-First-Token Delay (`first_token_ms`)**: `1827.9 ms` (**23.3%**)
-- **Post-First-Token Delay (`total_ms - first_token_ms`)**: `6011.4 ms` (**76.7%**)
+- **Pre-First-Token Delay (`first_token_ms`)**: `1514.2 ms` (**20.3%**)
+- **Post-First-Token Delay (`total_ms - first_token_ms`)**: `5945.1 ms` (**79.7%**)
 
-> **Key Finding**: Over **76.7% of the total delay occurred AFTER the first token!**
-> In a multi-step pipeline, measuring standard TTFT only captures the beginning of Step 1. The vast majority (76.7%) of user wait time is spent generating the subsequent sequential steps (decide, draft completion, and verification pass).
+> **Key Finding**: Over **79.7% of the total delay occurred AFTER the first token!**
+> In a multi-step pipeline, measuring standard TTFT only captures the beginning of Step 1. The vast majority (79.7%) of user wait time is spent generating subsequent sequential steps (decide, draft completion, and verification pass).
 
 ---
 
