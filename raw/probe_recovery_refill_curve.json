@@ -1,0 +1,198 @@
+[
+  {
+    "step": "initial_baseline",
+    "elapsed_s": 0.0,
+    "result": {
+      "status_code": 200,
+      "latency_ms": 510.5,
+      "headers": {
+        "x-ratelimit-limit-requests": "1000",
+        "x-ratelimit-limit-tokens": "8000",
+        "x-ratelimit-remaining-requests": "999",
+        "x-ratelimit-remaining-tokens": "7978",
+        "x-ratelimit-reset-requests": "1m26.4s",
+        "x-ratelimit-reset-tokens": "164ms"
+      },
+      "body": {
+        "id": "chatcmpl-e704ed30-ed51-4d58-a71d-d4179a19a302",
+        "object": "chat.completion",
+        "created": 1794511004,
+        "model": "qwen/qwen3.8-27b",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "ready"
+            },
+            "logprobs": null,
+            "finish_reason": "stop"
+          }
+        ],
+        "usage": {
+          "queue_time": 0.111638037,
+          "prompt_tokens": 17,
+          "prompt_time": 0.00131187,
+          "completion_tokens": 2,
+          "completion_time": 0.004407324,
+          "total_tokens": 19,
+          "total_time": 0.005719194
+        },
+        "usage_breakdown": null,
+        "system_fingerprint": "fp_a1293f40b5",
+        "x_groq": {
+          "id": "req_01m78k1rteezcsqrthw33x786s",
+          "seed": 1338460982
+        },
+        "service_tier": "on_demand"
+      }
+    }
+  },
+  {
+    "step": "drawdown_probe",
+    "elapsed_s": 0.0,
+    "result": {
+      "status_code": 200,
+      "latency_ms": 438.5,
+      "headers": {
+        "x-ratelimit-limit-requests": "1000",
+        "x-ratelimit-limit-tokens": "8000",
+        "x-ratelimit-remaining-requests": "998",
+        "x-ratelimit-remaining-tokens": "5270",
+        "x-ratelimit-reset-requests": "2m52.8s",
+        "x-ratelimit-reset-tokens": "20.475s"
+      },
+      "body": {
+        "id": "chatcmpl-ed3257e1-871d-4d6e-a16b-6c88883508c7",
+        "object": "chat.completion",
+        "created": 1794511005,
+        "model": "qwen/qwen3.8-27b",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "Based on a detailed analysis of the provided text,"
+            },
+            "logprobs": null,
+            "finish_reason": "length"
+          }
+        ],
+        "usage": {
+          "queue_time": 0.114031359,
+          "prompt_tokens": 2720,
+          "prompt_time": 0.228611458,
+          "completion_tokens": 10,
+          "completion_time": 0.019332036,
+          "total_tokens": 2730,
+          "total_time": 0.247943494
+        },
+        "usage_breakdown": null,
+        "system_fingerprint": "fp_21e59ac2de",
+        "x_groq": {
+          "id": "req_01m78k1s08en0r5qe9nw6xdzhe",
+          "seed": 1299594638
+        },
+        "service_tier": "on_demand"
+      }
+    }
+  },
+  {
+    "step": "refill_sample_8.0s",
+    "elapsed_s": 8.0,
+    "result": {
+      "status_code": 200,
+      "latency_ms": 142.6,
+      "headers": {
+        "x-ratelimit-limit-requests": "1000",
+        "x-ratelimit-limit-tokens": "8000",
+        "x-ratelimit-remaining-requests": "997",
+        "x-ratelimit-remaining-tokens": "6248",
+        "x-ratelimit-reset-requests": "4m19.2s",
+        "x-ratelimit-reset-tokens": "15s"
+      },
+      "body": {
+        "id": "chatcmpl-562ee922-d40c-46b2-b190-a822f2442f60",
+        "object": "chat.completion",
+        "created": 1794511013,
+        "model": "qwen/qwen3.8-27b",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "ping"
+            },
+            "logprobs": null,
+            "finish_reason": "stop"
+          }
+        ],
+        "usage": {
+          "queue_time": 0.053887825,
+          "prompt_tokens": 17,
+          "prompt_time": 0.001216823,
+          "completion_tokens": 2,
+          "completion_time": 0.004017813,
+          "total_tokens": 19,
+          "total_time": 0.005234636
+        },
+        "usage_breakdown": null,
+        "system_fingerprint": "fp_21e59ac2de",
+        "x_groq": {
+          "id": "req_01m78k2196e4k9yd9374t6hn0h",
+          "seed": 1898710653
+        },
+        "service_tier": "on_demand"
+      }
+    }
+  },
+  {
+    "step": "refill_sample_20.0s",
+    "elapsed_s": 20.0,
+    "result": {
+      "status_code": 200,
+      "latency_ms": 390.4,
+      "headers": {
+        "x-ratelimit-limit-requests": "1000",
+        "x-ratelimit-limit-tokens": "8000",
+        "x-ratelimit-remaining-requests": "996",
+        "x-ratelimit-remaining-tokens": "7647",
+        "x-ratelimit-reset-requests": "5m45.6s",
+        "x-ratelimit-reset-tokens": "3.008s"
+      },
+      "body": {
+        "id": "chatcmpl-a0cfdb61-3053-4edb-bad0-4507353b3ecd",
+        "object": "chat.completion",
+        "created": 1794511025,
+        "model": "qwen/qwen3.8-27b",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "done"
+            },
+            "logprobs": null,
+            "finish_reason": "stop"
+          }
+        ],
+        "usage": {
+          "queue_time": 0.30147808,
+          "prompt_tokens": 17,
+          "prompt_time": 0.001171081,
+          "completion_tokens": 2,
+          "completion_time": 0.004410318,
+          "total_tokens": 19,
+          "total_time": 0.005581399
+        },
+        "usage_breakdown": null,
+        "system_fingerprint": "fp_424cb89518",
+        "x_groq": {
+          "id": "req_01m78k2d4hevvbg24dnw47z663",
+          "seed": 1310560943
+        },
+        "service_tier": "on_demand"
+      }
+    }
+  }
+]

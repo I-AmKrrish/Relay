@@ -106,48 +106,47 @@
   },
   {
     "id": "q12",
-    "category": "refusal",
-    "question": "What optimizer and learning rate schedule was used to train the Llama 3 405B model?",
+    "category": "near_miss_refusal",
+    "question": "What weight decay parameter value was used for the Adam optimizer during training of the base Transformer model in Section 5.3 of Attention Is All You Need?",
     "expected_answer": "The papers do not say.",
     "expected_citations": [],
     "is_refusal": true,
-    "paper_keys": []
+    "paper_keys": ["attention"]
   },
   {
     "id": "q13",
-    "category": "refusal",
-    "question": "What is the token vocabulary size and number of mel-filterbank bins in OpenAI's Whisper model?",
+    "category": "near_miss_refusal",
+    "question": "What specific manufacturer brand and polar pattern of microphone hardware was used to record the human speakers in the Moshi speech training dataset in Section 4?",
     "expected_answer": "The papers do not say.",
     "expected_citations": [],
     "is_refusal": true,
-    "paper_keys": []
+    "paper_keys": ["moshi"]
   },
   {
     "id": "q14",
-    "category": "refusal",
-    "question": "How many total GPU hours were spent pre-training the Helium 7B text model?",
+    "category": "near_miss_refusal",
+    "question": "What is the exact Gumbel-Softmax temperature schedule used to anneal discrete boundary decisions during training in Section 2 of Dynamic Chunking?",
     "expected_answer": "The papers do not say.",
     "expected_citations": [],
     "is_refusal": true,
-    "paper_keys": []
+    "paper_keys": ["dynamic_chunking"]
   },
   {
     "id": "q15",
-    "category": "refusal",
-    "question": "Does Dynamic Chunking support masked autoencoding for visual 3D point cloud classification?",
+    "category": "near_miss_refusal",
+    "question": "What was the exact wall-clock training time in seconds per step for the base Transformer model on 8 NVIDIA P100 GPUs in Section 5.3?",
     "expected_answer": "The papers do not say.",
     "expected_citations": [],
     "is_refusal": true,
-    "paper_keys": []
+    "paper_keys": ["attention"]
   },
   {
     "id": "q16",
-    "category": "refusal",
-    "question": "What was the BLEU score achieved by the original 2017 Transformer on Chinese-to-English translation?",
+    "category": "out_of_corpus_refusal",
+    "question": "What optimizer and learning rate schedule was used to train the Llama 3 405B model?",
     "expected_answer": "The papers do not say.",
     "expected_citations": [],
     "is_refusal": true,
     "paper_keys": []
   }
 ]
-

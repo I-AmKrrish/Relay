@@ -68,6 +68,7 @@ class LLMClient:
         self.max_requests = max_requests
         self.timeout_seconds = timeout_seconds
         self.request_count = 0
+        self.last_headers: Dict[str, str] = {}
         self._server_checked = False
         self._server_available = False
 
@@ -246,6 +247,7 @@ class LLMClient:
                         k_lower = k.lower()
                         if k_lower.startswith("x-ratelimit-") or k_lower in ("retry-after", "content-type"):
                             response_headers[k_lower] = v
+                    self.last_headers = response_headers
 
                     if status_code == 429:
                         raw_bytes = await resp.aread()

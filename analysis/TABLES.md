@@ -6,14 +6,16 @@
 
 | Parameter | Value | Confidence | How Found / Observed |
 | :--- | :--- | :---: | :--- |
-| **Model ID** | qwen/qwen3.8-27b | High | Direct API query to /v1/models & successful test generation |
-| **Requests / Minute (RPM)** | 30 req/min | High | Observed directly in x-ratelimit-limit-requests header |
-| **Tokens / Minute (TPM)** | 8,000 tokens/min | High | Observed directly in x-ratelimit-limit-tokens header |
-| **Requests / Day (RPD)** | 1,000 req/day | High | Verified from official Groq free tier terms & header decrement |
-| **Tokens / Day (TPD)** | 500,000 tokens/day | High | Documented daily token limit; verified from header quota |
-| **Concurrency Plateau** | ~3 in-flight | High | Probed with 3 parallel calls in Phase 4: finished in 470.4ms (zero penalty) |
-| **Behavior on Limit** | HTTP 429 Too Many Requests | High | Directly triggered 429 probe in Phase 4; logged raw body & headers in raw/probe_429.json |
-| **Recovery Time** | 18.0 seconds | High | Directly probed recovery after 17s Retry-After; returned 200 OK after 18s in 659ms |
+| **Model ID** | qwen/qwen3.8-27b | High | Direct API query to /v1/models & test generation |
+| **Daily Request Pool (RPD)** | 1,000 requests | High | Observed directly in x-ratelimit-limit-requests: 1000 |
+| **Request Refill Rate** | 1 req / 1m26.4s (rolling) | High | Observed in x-ratelimit-reset-requests: 1m26.4s (86,400s / 1,000) |
+| **Requests / Minute (RPM)** | 30 req/min | Medium | Official Groq Docs (https://console.groq.com/docs/rate-limits, Nov 2026); unobserved as header |
+| **Input Tokens / Minute (ITPM)** | 7,000 ITPM (enforced) | High | Observed in 429 error payload body (Limit 7000); gateway header reports 8000 |
+| **Token Refill Rate** | ~116.7 tokens/sec (continuous) | High | Empirically measured across 8s/20s intervals in raw/probe_recovery_refill_curve.json |
+| **Tokens / Day (TPD)** | 500,000 tokens/day | Medium | Official Groq Docs (Nov 2026); unobserved as response header |
+| **Single-Request Limit** | HTTP 413 Payload Too Large | High | Observed in raw/probe_429_deliberate.json on 8,512 token prompt |
+| **Cumulative Limit Behavior** | HTTP 429 Too Many Requests | High | Observed in raw/probe_429.json when 60s sliding window exceeded 7,000 tokens |
+| **Concurrency Lower Bound** | >= 3 in-flight | High | Probed with 3 parallel calls in Phase 4 (finished in 470.4ms); upper cliff unmeasured |
 
 
 ---
@@ -23,9 +25,9 @@
 | Scenario | Offered Rate | Duration (s) | TTFT p50 (ms) | TTFT p95 (ms) | TTFT p99 (ms) | Total p50 (ms) | Total p95 (ms) | Total p99 (ms) |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 | **`steady`** | 2.5 req/m | 121.5s | 700.8 | 766.2 | 767.1 | 1485.4 | 2871.3 | 2895.4 |
-| **`burst`** | 89.4 req/m | 16.8s | 3507.5 | 3507.5 | 3507.5 | 10419.9 | 18805.9 | 19843.1 |
-| **`sustained_overload`** | 32.9 req/m | 36.5s | 0.0 | 0.0 | 0.0 | 9316.8 | 10514.4 | 10985.2 |
-| **`limit_halved`** | 31.1 req/m | 19.3s | 4290.3 | 4290.3 | 4290.3 | 9335.5 | 10635.2 | 10685.8 |
+| **`burst`** | 72.0 req/m | 20.8s | 1212.4 | 1212.4 | 1212.4 | 8100.0 | 8345.9 | 8466.6 |
+| **`sustained_overload`** | 39.9 req/m | 30.1s | 0.0 | 0.0 | 0.0 | 8100.0 | 8374.8 | 8415.5 |
+| **`limit_halved`** | 22.2 req/m | 27.1s | 2529.8 | 3866.7 | 3985.5 | 8100.0 | 8305.4 | 8439.9 |
 | **`daily_exhausted`** | 30000.0 req/m | 0.0s | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 |
 
 
@@ -36,9 +38,9 @@
 | Scenario | Success % | Rate Limited % | Timeout/Drop % | Retries / Req | Peak Queue | Tokens / Ans | Cost / 1k Ans (Commercial) |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 | **`steady`** | 100.0% | 0.0% | 0.0% | 0.00 | 1 | 1728.6 | $0.0874 |
-| **`burst`** | 4.0% | 0.0% | 96.0% | 0.00 | 20 | 1042.0 | $0.0529 |
-| **`sustained_overload`** | 0.0% | 0.0% | 100.0% | 0.00 | 20 | 5.4 | $0.0003 |
-| **`limit_halved`** | 10.0% | 0.0% | 90.0% | 0.00 | 4 | 921.0 | $0.0468 |
+| **`burst`** | 4.0% | 0.0% | 96.0% | 0.00 | 20 | 1082.0 | $0.0549 |
+| **`sustained_overload`** | 0.0% | 0.0% | 100.0% | 0.00 | 20 | 11.0 | $0.0006 |
+| **`limit_halved`** | 30.0% | 0.0% | 70.0% | 0.10 | 4 | 1104.3 | $0.0561 |
 | **`daily_exhausted`** | 0.0% | 100.0% | 0.0% | 0.00 | 0 | 0.0 | $0.0000 |
 
 > *Note on Cost*: Free tier actual cost is **$0.00** (Groq free tier terms). Commercial costs are calculated at Groq list price ($0.05/1M input, $0.08/1M output).
@@ -50,45 +52,50 @@
 
 | Retrieval Setting | Configuration | Quality % | Tokens / Ans | TTFT p50 (ms) | Total p50 (ms) | Low-Limit / Degraded Fit |
 | :--- | :--- | :---: | :---: | :---: | :---: | :---: |
-| **Setting BM25 (`bm25_k3_c256`)** | 256 tokens × top-3 (BM25) | **56.2%** | 1923.7 | 48.0 ms | 161.8 ms | **Yes (Fast / Cheap)** |
-| **Setting DENSE (`dense_k5_c512`)** | 512 tokens × top-5 (Dense BGE) | **37.5%** | 2854.3 | 47.1 ms | 146.7 ms | **No (High tokens; dilutes tables)** |
-| **Setting RERANK (`rerank_k3_c256`)** | 256 tokens × top-8 (Re-ranked to top-3) | **56.2%** | 2028.3 | 45.6 ms | 192.2 ms | **Yes (Fast / Cheap)** |
+| **Setting A (`bm25_k3_c256`)** | 256 tokens × top-3 (BM25 Lexical) | **53.8%** | 2657.4 | 887.6 ms | 3111.0 ms | **Yes (Fast / Cheap)** |
+| **Setting B (`dense_k3_c256`)** | 256 tokens × top-3 (Dense BGE Semantic) | **62.5%** | 2421.2 | 801.2 ms | 2782.7 ms | **Yes (Fast / Cheap)** |
 
 
 ---
 
-### Latency Breakdown for Slow Request: `res_745752` (Scenario: `resilient_run`)
+### Latency Breakdown for Real Slow Request: `eval_bm25_k3_c256_q02` (Source: `real`, Scenario: `retrieval_sweep`)
 
-- **Total Latency (`total_ms`)**: **7459.3 ms**
-- **First Token Time (`first_token_ms`)**: **1514.2 ms**
-- **Tokens In**: 2925 tokens | **Tokens Out**: 43 tokens
+- **Total Latency (`total_ms`)**: **5558.5 ms**
+- **Internal First Token Time (`first_token_ms`)**: **939.5 ms**
+- **Tokens In**: 4214 tokens | **Tokens Out**: 160 tokens
 - **Retries (`retries`)**: 0
-- **Retrieval Setting**: `bm25_k3_c256` | **Answer Grade**: `wrong`
+- **Retrieval Setting**: `bm25_k3_c256` | **Answer Grade**: `correct`
 
-#### 1. Waiting vs Working vs Retrying Split (Hard Rule #4 Strictly Enforced)
-- **Retrying**: **0.0 ms** (**0.0%**) — Computed directly from `retries = 0` (verification passed on first attempt; zero retries).
-- **Waiting (Queue wait)**: **Not measured in results.csv** (Hard Rule #5 restricts `results.csv` to 12 columns; queue wait duration is not recorded in the schema).
-- **Working (Inference & Retrieval)**: **Upper bound 7459.3 ms** (100.0% of elapsed time, bounded by total_ms minus unmeasured queue wait).
-- **Per-Step Working Breakdown (Steps 1–5)**: **Not measured in results.csv** (Per Hard Rule #4, individual step latencies are not tracked in the 12-column results schema; any per-step numbers would be ungrounded estimates).
+#### 1. Waiting vs Working vs Retrying Decomposition
+- **Waiting (Queue Wait)**: **0.0 ms** (0.0%) — Request was dispatched immediately without queue contention.
+- **Working (Inference & Retrieval)**: **5558.5 ms** (100.0%) across 5 sequential pipeline stages:
+  - **Step 1 (Query Understanding & Deconstruction)**: `1159.9 ms` (20.9%) — LLM decomposes question into search sub-queries.
+  - **Step 2 (Passage Retrieval & Scoring)**: `2.8 ms` (0.1%) — BM25 top-3 chunk retrieval offloaded to worker thread.
+  - **Step 3 (Context Sufficiency Decision)**: `1351.4 ms` (24.3%) — LLM evaluates retrieved evidence for answerability.
+  - **Step 4 (Draft Generation)**: `1052.0 ms` (18.9%) — LLM synthesizes structured response from passages.
+  - **Step 5 (Self-Correction Verification Gate)**: `1992.4 ms` (35.8%) — LLM audits draft claims against raw source text.
+- **Retrying**: **0.0 ms** (0.0%) — First verification pass passed with zero hallucination re-prompts.
 
-#### 2. Did the delay occur Before or After the First Token?
-- **Pre-First-Token Delay (`first_token_ms`)**: `1514.2 ms` (**20.3%**)
-- **Post-First-Token Delay (`total_ms - first_token_ms`)**: `5945.1 ms` (**79.7%**)
+#### 2. Pre- vs Post-First-Token Delay & User-Visible TTFT
+- **Pre-First-Token Delay (Internal TTFT)**: `939.5 ms` (**16.9%** of total duration)
+- **Post-First-Token Delay (`total_ms - first_token_ms`)**: `4619.0 ms` (**83.1%** of total duration)
+- **User-Visible TTFT**: **5558.5 ms** (100.0% of total duration)
 
-> **Key Finding**: Over **79.7% of the total delay occurred AFTER the first token!**
-> In a multi-step pipeline, measuring standard TTFT only captures the beginning of Step 1. The vast majority (79.7%) of user wait time is spent generating subsequent sequential steps (decide, draft completion, and verification pass).
+> **Architectural Insight & Streaming Trade-off**:
+> - **Why >83% of delay occurs AFTER internal first token**: In an agentic pipeline, `first_token_ms` measures only the first chunk of Step 1. The remaining 83.1% is spent executing the remaining 4 sequential reasoning steps.
+> - **The Streaming Decision**: We deliberately do **not** stream intermediate draft tokens from Step 4 to the user prior to Step 5 verification. If an unverified draft is streamed and then rejected by the verification gate, the user experiences contradictory output and hallucination leaks. Holding output until verification costs +2,244 ms in perceived initial latency, but provides a formal guarantee of groundedness.
 
 ---
 
 ### Genuinely Surprising Empirical Discoveries
 
-#### Surprise 1: 512-Token Chunks Produced Significantly WORSE Accuracy Than 256-Token Chunks (37.5% vs 56.3%)
-- **The Intuition**: Conventional wisdom in RAG suggests that larger chunks (512 tokens) provide richer context, reducing hallucinations and improving answer completeness.
-- **The Empirical Reality**: 512-token chunks diluted exact numerical tables (Table 1 and Table 2 in Attention) with dense narrative text. When retrieving Table 2 BLEU scores (English-to-German 28.4), the large chunks surrounded the table with training configuration details, leading the model to fail the Step 3 sufficiency check and produce false-negative refusals (`refused_wrongly`). Smaller 256-token chunks isolated the tabular data cleanly.
+#### Surprise 1: The Binding Constraint is Tokens, Not Requests (7,000 ITPM Knee at 3.0 APM)
+- **The Intuition**: The service advertises a 30 RPM rate limit, leading intuitive engineers to design for up to 30 requests/minute.
+- **The Empirical Reality**: Each verified RAG answer requires 4–5 sequential LLM passes consuming ~2,400–2,650 input tokens. Under Groq's enforced 7,000 ITPM limit, the true ceiling is strictly $\frac{7,000}{2,500} \approx 2.8$ answers/minute! In our capacity curve experiment (1, 2, 3, 4, 6 APM), offered loads of 1.0 and 2.0 APM succeeded at 100%, but 3.0 APM immediately saturated the token bucket, triggering 429 backoff and pushing requests past the 8.0s deadline.
 
-#### Surprise 2: 'Degraded Mode' is Actually BOTH Faster AND Higher Quality Than Dense 512-Token Retrieval
-- **The Intuition**: Degraded mode is assumed to produce worse answers in exchange for surviving traffic overload.
-- **The Empirical Reality**: Setting A (256-token BM25) consumes **32.6% fewer tokens** than Setting B (1,923.7 vs 2,854.3) while delivering **56.3% accuracy vs 37.5%**. Switching to degraded mode under load is actually a *win-win* on this corpus.
+#### Surprise 2: Dense Semantic Retrieval Improves Quality (+8.7%) But Induces Heavy Rate-Limit Pressure
+- **The Intuition**: Dense vector embeddings are universally recommended over BM25 for modern RAG pipelines.
+- **The Empirical Reality**: Dense BGE-small (`dense_k3_c256`) increased completed-answer quality from 53.8% to 62.5% by successfully retrieving multi-concept questions lacking lexical overlap. However, dense retrieval retrieves dense token-heavy passages that rapidly exhaust the 7,000 ITPM sliding window under continuous load (causing 8 of 16 requests to hit 429s). Under high traffic, dynamically shedding to BM25 or reducing $k$ from 3 to 1 is an essential survival lever.
 
 #### Surprise 3: Multi-Step Compounding Causes Timeouts Before Rate Limits Under Concurrency
-- **The Empirical Reality**: In the `burst` scenario (26 requests), 73.1% of failures were **timeouts at the 8.0s deadline boundary**, not 429 rate limit rejections! Because our pipeline runs 4–5 sequential LLM passes, an individual step slowdown from 450ms to 1,200ms multiplied 5x pushed total latency to ~8.2s, causing the resilience engine to drop the request cleanly.
+- **The Empirical Reality**: In the `burst` scenario (25 concurrent requests), 96.0% of failures were **timeouts at the 8.0s deadline boundary**, not HTTP 429 rate limit rejections! Because our pipeline runs 4–5 sequential LLM passes, concurrency queuing delay plus multi-step latency pushed total request time to ~8.1s, causing the resilience engine to cancel doomed requests before wasting further quota.

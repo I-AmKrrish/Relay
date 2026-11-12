@@ -1,0 +1,368 @@
+[
+  {
+    "setting": "Setting A (256-tok, top-3 BM25)",
+    "setting_id": "bm25_k3_c256",
+    "variable_isolated": "Baseline (Lexical)",
+    "results": [
+      {
+        "id": "q01",
+        "status": "ok",
+        "grade": "refused_wrongly",
+        "first_token_ms": 774.8426999896765,
+        "total_ms": 3990.5499999877065,
+        "tokens_in": 2888,
+        "tokens_out": 566,
+        "tokens_total": 3454,
+        "final_answer": "The provided passages do not explicitly state the dimensionality $d_{model}$ and the number of attention heads ($h$) for the **base** Transformer model in a single clear statement.\n\n*   Passage 2 [Attention Is All You Need, Sec 6.3, p. 9] presents Table 3, which lists variations. It shows a row labeled \"base\" with $N=6$ (implied by context of standard base model, though the table snippet provided is fragmented and does not explicitly list the $d_{model}$ and $h$ values for the \"base\" row in the text provided, only for the \"big\" model which has $d_{model}=1024$ and $h=16$ is often associated, but here the table shows \"big\" with $d_{model}=1024$ and $N=6$? No, the table snippet shows \"big\" with $d_{model}=1024$ and $N=6$ is not explicitly linked to $h$ in the text provided).\n*   Actually, looking closely at Passage 2, the table lists \"base\" and \"big\". The \"big\" model is listed with $d_{model}=1024$ and $N=6$ (steps 300K). The \"base\" model row does not have its $d_{model}$ and $h$ values explicitly printed in the provided text snippet of the table; it only lists metrics like PPL and BLEU.\n*   Passage 3 [Attention Is All You Need, Sec 6.3, p. 9] mentions a \"4-layer transformer with $d_{model} = 1024$\" but this is specifically for the **English Constituency Parsing** task, not the base translation model.\n\nSince the specific values for the **base** translation model's $d_{model}$ and number of heads are not explicitly stated in the provided text (the table in Passage 2 is incomplete regarding the base model's architectural parameters in the text provided), I cannot answer this question based **exclusively** on the provided passages.\n\nThe papers do not say."
+      },
+      {
+        "id": "q02",
+        "status": "ok",
+        "grade": "correct",
+        "first_token_ms": 939.5461000094656,
+        "total_ms": 5558.536399999866,
+        "tokens_in": 4214,
+        "tokens_out": 160,
+        "tokens_total": 4374,
+        "final_answer": "The Mimi neural audio codec has a sampling frequency ($f_s$) of 24 kHz and a frame rate ($f_r$) of 12.5 Hz [Moshi: a speech-text foundation model for real-time dialogue, Sec 5.2, p. 23]."
+      },
+      {
+        "id": "q03",
+        "status": "ok",
+        "grade": "correct",
+        "first_token_ms": 1727.2239000012632,
+        "total_ms": 4483.552899997449,
+        "tokens_in": 4083,
+        "tokens_out": 205,
+        "tokens_total": 4288,
+        "final_answer": "The objective of the ratio loss in Dynamic Chunking is to guide the model toward a desired compression ratio by preventing convergence to trivial solutions, such as retaining nearly all vectors or compressing excessively. It achieves this by guiding the average boundary probability ($G$) to match the target compression ratio ($1/N$), thereby preserving content-adaptive compression where the model learns which vectors to retain based on semantic importance rather than predetermined patterns. [Dynamic Chunking for End-to-End Hierarchical Sequence Modeling, Sec 2.2.3 Ratio Loss, p. 8]"
+      },
+      {
+        "id": "q04",
+        "status": "ok",
+        "grade": "refused_wrongly",
+        "first_token_ms": 1009.4875000067987,
+        "total_ms": 2057.255499996245,
+        "tokens_in": 1046,
+        "tokens_out": 105,
+        "tokens_total": 1151,
+        "final_answer": "The papers do not say."
+      },
+      {
+        "id": "q05",
+        "status": "ok",
+        "grade": "refused_wrongly",
+        "first_token_ms": 825.8867000113241,
+        "total_ms": 4734.963700000662,
+        "tokens_in": 3669,
+        "tokens_out": 180,
+        "tokens_total": 3849,
+        "final_answer": "The papers do not say."
+      },
+      {
+        "id": "q06",
+        "status": "rate_limited",
+        "grade": "correct",
+        "first_token_ms": 1147.7685999998357,
+        "total_ms": 4986.353499989491,
+        "tokens_in": 2497,
+        "tokens_out": 132,
+        "tokens_total": 2629,
+        "final_answer": "The Transformer (big) model achieved a BLEU score of 28.4 on the WMT 2014 English-to-German translation task [Attention Is All You Need, Sec 6 Results, p. 8]."
+      },
+      {
+        "id": "q07",
+        "status": "rate_limited",
+        "grade": "correct",
+        "first_token_ms": 1131.880100001581,
+        "total_ms": 5207.325099996524,
+        "tokens_in": 2885,
+        "tokens_out": 245,
+        "tokens_total": 3130,
+        "final_answer": "Based on Table 4 in the provided passages, Mimi (specifically the variant with adversarial loss only) achieves a MUSHRA score of **81.0\u00b11.3**, while the RVQGAN baseline achieves a MUSHRA score of **31.3\u00b11.3** [Moshi: a speech-text foundation model for real-time dialogue, Sec 5.2 Audio Tokenization, p. 23]. The text further states that Mimi \"significantly outperforms RVQGAN\" [Moshi: a speech-text foundation model for real-time dialogue, Sec 5.2 Audio Tokenization, p. 24]."
+      },
+      {
+        "id": "q08",
+        "status": "rate_limited",
+        "grade": "wrong",
+        "first_token_ms": 0.0,
+        "total_ms": 3424.0558999881614,
+        "tokens_in": 1532,
+        "tokens_out": 99,
+        "tokens_total": 1631,
+        "final_answer": ""
+      },
+      {
+        "id": "q09",
+        "status": "ok",
+        "grade": "refused_wrongly",
+        "first_token_ms": 781.1776999733411,
+        "total_ms": 2179.1710999968927,
+        "tokens_in": 1276,
+        "tokens_out": 103,
+        "tokens_total": 1379,
+        "final_answer": "The papers do not say."
+      },
+      {
+        "id": "q010",
+        "status": "ok",
+        "grade": "refused_wrongly",
+        "first_token_ms": 1003.7290000182111,
+        "total_ms": 3514.8634999932256,
+        "tokens_in": 2139,
+        "tokens_out": 459,
+        "tokens_total": 2598,
+        "final_answer": "The provided passages do not explicitly state the specific functional definition of the \"Inner Monologue\" (e.g., whether it represents internal thoughts, text, or a specific modality) nor do they explain the causal reason *why* it is delayed relative to user audio, other than defining its position in the sequence.\n\nHowever, the passages do provide the following factual details regarding its impact and structure:\n\n1.  **Impact on Performance:** The Inner Monologue significantly improves Moshi's performance on spoken question answering benchmarks, \"almost tripling its accuracy\" compared to models trained without it [Moshi: a speech-text foundation model for real-time dialogue, Sec 5.5, p. 29].\n2.  **Inference Cost:** It only marginally increases inference cost, requiring the generation of 17 tokens per multi-stream timestep instead of 16 [Moshi: a speech-text foundation model for real-time dialogue, Sec 5.5, p. 29].\n3.  **Sequence Structure:** In the final set of sequences $V$, the Inner Monologue is not explicitly listed as a separate stream in Equation (6) provided in Passage 1, which lists aligned text tokens, Moshi's semantic/acoustic tokens, and the \"other\" (user) semantic/acoustic tokens. The delay parameter $\\tau$ is applied to the acoustic tokens of both Moshi and the other party in the equation, but the specific stream corresponding to the \"Inner Monologue\" is not explicitly labeled in the provided equation snippet, nor is the reason for its delay explained in the text.\n\nTherefore, regarding the specific function and the reason for the delay:\n\nThe papers do not say."
+      },
+      {
+        "id": "q11",
+        "status": "ok",
+        "grade": "refused_wrongly",
+        "first_token_ms": 684.1184000077192,
+        "total_ms": 2286.699599993881,
+        "tokens_in": 2194,
+        "tokens_out": 117,
+        "tokens_total": 2311,
+        "final_answer": "The papers do not say."
+      },
+      {
+        "id": "q12",
+        "status": "ok",
+        "grade": "refused_correctly",
+        "first_token_ms": 633.2229000108782,
+        "total_ms": 2258.361899992451,
+        "tokens_in": 2932,
+        "tokens_out": 117,
+        "tokens_total": 3049,
+        "final_answer": "The papers do not say."
+      },
+      {
+        "id": "q13",
+        "status": "ok",
+        "grade": "refused_correctly",
+        "first_token_ms": 589.8272999911569,
+        "total_ms": 1537.2939999797381,
+        "tokens_in": 1184,
+        "tokens_out": 112,
+        "tokens_total": 1296,
+        "final_answer": "The papers do not say."
+      },
+      {
+        "id": "q14",
+        "status": "ok",
+        "grade": "refused_correctly",
+        "first_token_ms": 1360.320399980992,
+        "total_ms": 3389.6016999788117,
+        "tokens_in": 2414,
+        "tokens_out": 119,
+        "tokens_total": 2533,
+        "final_answer": "The papers do not say."
+      },
+      {
+        "id": "q15",
+        "status": "ok",
+        "grade": "refused_correctly",
+        "first_token_ms": 694.4623999879695,
+        "total_ms": 3040.2605999843217,
+        "tokens_in": 2387,
+        "tokens_out": 550,
+        "tokens_total": 2937,
+        "final_answer": "The papers do not say.\n\n**Reasoning:**\nThe provided passages state that the base models were trained on 8 NVIDIA P100 GPUs and that \"each training step took about 0.4 seconds\" [Attention Is All You Need, Sec 5.2, p. 7]. However, the question specifically asks for the information in **Section 5.3**. In the provided text, Section 5.3 is titled \"Optimizer\" and discusses the Adam optimizer and learning rate schedule [Attention Is All You Need, Sec 5.3, p. 7]. It does not contain the wall-clock training time per step; that information is located in Section 5.2. Therefore, strictly adhering to the constraint that the answer must be found in Section 5.3 (or that the passages do not contain the answer *in the specified location*), the correct response based on the strict interpretation of the question's location constraint is that the papers do not say (in Section 5.3).\n\n*Note: If the question did not restrict the answer to Section 5.3, the answer would be 0.4 seconds, cited from Section 5.2. However, since the prompt explicitly asks \"in Section 5.3\" and Section 5.3 does not contain this data, the strict factual answer based on the provided text for that specific section is that it is not stated there.*\n\nLet's re-read the prompt rules. \"Base your answer EXCLUSIVELY on the provided passages.\" \"If the provided passages do NOT contain the answer, you must respond: 'The papers do not say.'\"\n\nThe question asks: \"What was the exact wall-clock training time in seconds per step for the base Transformer model on 8 NVIDIA P100 GPUs **in Section 5.3**?\"\n\nThe passage for Section 5.3 (Passage 1, latter half) discusses the Optimizer. It does **not** mention the training time per step. The training time per step is mentioned in Section 5.2 (Passage 1, first half).\n\nTherefore, the specific claim requested (time per step *in Section 5.3*) is not present in the text of Section 5.3.\n\nThe papers do not say."
+      },
+      {
+        "id": "q16",
+        "status": "ok",
+        "grade": "refused_correctly",
+        "first_token_ms": 514.9857999931555,
+        "total_ms": 1411.9071000022814,
+        "tokens_in": 1225,
+        "tokens_out": 102,
+        "tokens_total": 1327,
+        "final_answer": "The papers do not say."
+      }
+    ]
+  },
+  {
+    "setting": "Setting B (256-tok, top-3 Dense BGE)",
+    "setting_id": "dense_k3_c256",
+    "variable_isolated": "Retriever: Dense BGE vs BM25 (chunk=256 held constant)",
+    "results": [
+      {
+        "id": "q01",
+        "status": "rate_limited",
+        "grade": "correct",
+        "first_token_ms": 739.9846999906003,
+        "total_ms": 3948.8689999852795,
+        "tokens_in": 2310,
+        "tokens_out": 145,
+        "tokens_total": 2455,
+        "final_answer": "The base Transformer model uses a dimensionality of $d_{model} = 512$ [Attention Is All You Need, Sec 3.1, p. 3] and employs $h = 8$ parallel attention heads [Attention Is All You Need, Sec 3.2.3, p. 5]."
+      },
+      {
+        "id": "q02",
+        "status": "rate_limited",
+        "grade": "correct",
+        "first_token_ms": 1587.7362999890465,
+        "total_ms": 4026.3149999955203,
+        "tokens_in": 2523,
+        "tokens_out": 220,
+        "tokens_total": 2743,
+        "final_answer": "The Mimi neural audio codec operates with a sampling frequency of 24kHz and a frame rate of 12.5 frames per second [Moshi: a speech-text foundation model for real-time dialogue, Sec 3.3, p. 10]. This is also confirmed in the audio quality evaluation table, which lists the sample rate ($f_s$) as 24kHz and the codec frame rate ($f_r$) as 12.5Hz for the Mimi variants [Moshi: a speech-text foundation model for real-time dialogue, Sec 5.2, p. 23]."
+      },
+      {
+        "id": "q03",
+        "status": "rate_limited",
+        "grade": "correct",
+        "first_token_ms": 635.4811000055633,
+        "total_ms": 3205.0900000031106,
+        "tokens_in": 2481,
+        "tokens_out": 151,
+        "tokens_total": 2632,
+        "final_answer": "The objective of the ratio loss is to guide the model toward the desired compression ratio while preserving content-adaptive compression, ensuring the model learns which vectors to retain based on semantic importance rather than following predetermined patterns [Dynamic Chunking for End-to-End Hierarchical Sequence Modeling, Sec 2.2.3 Ratio Loss, p. 8]."
+      },
+      {
+        "id": "q04",
+        "status": "ok",
+        "grade": "refused_wrongly",
+        "first_token_ms": 582.1629000129178,
+        "total_ms": 3115.9341000020504,
+        "tokens_in": 2435,
+        "tokens_out": 117,
+        "tokens_total": 2552,
+        "final_answer": "The papers do not say."
+      },
+      {
+        "id": "q05",
+        "status": "rate_limited",
+        "grade": "wrong",
+        "first_token_ms": 0.0,
+        "total_ms": 3928.1997000216506,
+        "tokens_in": 2615,
+        "tokens_out": 152,
+        "tokens_total": 2767,
+        "final_answer": ""
+      },
+      {
+        "id": "q06",
+        "status": "rate_limited",
+        "grade": "wrong",
+        "first_token_ms": 0.0,
+        "total_ms": 2316.2390000070445,
+        "tokens_in": 1457,
+        "tokens_out": 85,
+        "tokens_total": 1542,
+        "final_answer": ""
+      },
+      {
+        "id": "q07",
+        "status": "rate_limited",
+        "grade": "correct",
+        "first_token_ms": 677.704800007632,
+        "total_ms": 3479.7117999987677,
+        "tokens_in": 2885,
+        "tokens_out": 212,
+        "tokens_total": 3097,
+        "final_answer": "Based on Table 4 in the Moshi paper, Mimi (specifically the variant with adversarial loss only) achieves a subjective MUSHRA quality score of **81.0\u00b11.3**, whereas the RVQGAN baseline achieves a score of **31.3\u00b11.3** [Moshi: a speech-text foundation model for real-time dialogue, Sec 5.2 Audio Tokenization, p. 23]. The text further states that Mimi \"significantly outperforms RVQGAN\" [Moshi: a speech-text foundation model for real-time dialogue, Sec 5.2 Audio Tokenization, p. 24]."
+      },
+      {
+        "id": "q08",
+        "status": "ok",
+        "grade": "refused_wrongly",
+        "first_token_ms": 792.269799974747,
+        "total_ms": 2421.951700001955,
+        "tokens_in": 2460,
+        "tokens_out": 117,
+        "tokens_total": 2577,
+        "final_answer": "The papers do not say."
+      },
+      {
+        "id": "q09",
+        "status": "rate_limited",
+        "grade": "wrong",
+        "first_token_ms": 0.0,
+        "total_ms": 3539.654399995925,
+        "tokens_in": 2336,
+        "tokens_out": 193,
+        "tokens_total": 2529,
+        "final_answer": ""
+      },
+      {
+        "id": "q010",
+        "status": "rate_limited",
+        "grade": "correct",
+        "first_token_ms": 650.1064999902155,
+        "total_ms": 3013.3055000042077,
+        "tokens_in": 2145,
+        "tokens_out": 351,
+        "tokens_total": 2496,
+        "final_answer": "Based on the provided passages, the **Inner Monologue** in Moshi functions as a mechanism that enables the design of **streaming Text-to-Speech (TTS)** and **streaming Automatic Speech Recognition (ASR)** systems by adjusting the delay between text and audio tokens [Moshi: a speech-text foundation model for real-time dialogue, Sec 7 Conclusion, p. 41].\n\nThe delay relative to user audio (or text, depending on the task) is used to provide **lookahead** or allow the model to **listen to content before generating** the other modality:\n*   For **streaming TTS**, audio tokens are delayed by 2 seconds to give the text tokens lookahead [Moshi: a speech-text foundation model for real-time dialogue, Sec 5.7 Streaming ASR and TTS, p. 31].\n*   For **streaming ASR**, text tokens are delayed by 2 seconds, allowing the model to listen to the audio content before generating text tokens [Moshi: a speech-text foundation model for real-time dialogue, Sec 5.7 Streaming ASR and TTS, p. 31]."
+      },
+      {
+        "id": "q11",
+        "status": "ok",
+        "grade": "refused_wrongly",
+        "first_token_ms": 646.9741000037175,
+        "total_ms": 2338.780999998562,
+        "tokens_in": 2056,
+        "tokens_out": 117,
+        "tokens_total": 2173,
+        "final_answer": "The papers do not say."
+      },
+      {
+        "id": "q12",
+        "status": "ok",
+        "grade": "refused_correctly",
+        "first_token_ms": 741.7386999877635,
+        "total_ms": 2254.504899989115,
+        "tokens_in": 2377,
+        "tokens_out": 117,
+        "tokens_total": 2494,
+        "final_answer": "The papers do not say."
+      },
+      {
+        "id": "q13",
+        "status": "ok",
+        "grade": "refused_correctly",
+        "first_token_ms": 716.499100002693,
+        "total_ms": 1662.4101000197697,
+        "tokens_in": 1156,
+        "tokens_out": 109,
+        "tokens_total": 1265,
+        "final_answer": "The papers do not say."
+      },
+      {
+        "id": "q14",
+        "status": "ok",
+        "grade": "refused_correctly",
+        "first_token_ms": 705.0358999986202,
+        "total_ms": 3365.2588999830186,
+        "tokens_in": 2902,
+        "tokens_out": 173,
+        "tokens_total": 3075,
+        "final_answer": "The papers do not say."
+      },
+      {
+        "id": "q15",
+        "status": "ok",
+        "grade": "refused_correctly",
+        "first_token_ms": 620.6794999889098,
+        "total_ms": 2810.670399980154,
+        "tokens_in": 2383,
+        "tokens_out": 373,
+        "tokens_total": 2756,
+        "final_answer": "The papers do not say.\n\n**Reasoning:**\nThe provided passages do not contain the specific information requested.\n1.  **Section Mismatch:** The question asks for information from **Section 5.3**. However, in Passage 2, **Section 5.3** is titled \"Optimizer\" and discusses the Adam optimizer and learning rate schedule. It does not contain training time data.\n2.  **Location of Data:** The training time data (\"each training step took about 0.4 seconds\") is located in **Section 5.2** (\"Hardware and Schedule\") of Passage 2, not Section 5.3.\n3.  **Strict Adherence:** Since the question specifically restricts the answer to Section 5.3, and Section 5.3 does not contain the wall-clock training time, the correct response based on the strict rules is that the papers do not say (in the specified location).\n\n*(Note: If the question had asked for the time in Section 5.2, the answer would be 0.4 seconds [Attention Is All You Need, Sec 5.2, p. 7]. However, as asked for Section 5.3, the information is not present in that section.)*"
+      },
+      {
+        "id": "q16",
+        "status": "ok",
+        "grade": "refused_correctly",
+        "first_token_ms": 1603.8857999956235,
+        "total_ms": 4292.485299985856,
+        "tokens_in": 2358,
+        "tokens_out": 120,
+        "tokens_total": 2478,
+        "final_answer": "The papers do not say."
+      }
+    ]
+  }
+]

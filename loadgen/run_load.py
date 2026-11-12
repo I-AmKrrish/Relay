@@ -141,7 +141,7 @@ class LoadGenerator:
         print(f"--- Running Scenario: STEADY ({num_requests} requests, 1 every {interval_seconds}s) ---")
         print(f"{'='*60}")
 
-        await self._configure_standin(limit_rpm=30, limit_tpm=8000, limit_daily=1000)
+        await self._configure_standin(limit_rpm=30, limit_tpm=7000, limit_daily=1000)
         runner = ResilientPipelineRunner(llm_client=self.client)
 
         results: List[PipelineResult] = []
@@ -175,7 +175,7 @@ class LoadGenerator:
         print(f"--- Running Scenario: BURST ({num_requests} concurrent requests) ---")
         print(f"{'='*60}")
 
-        await self._configure_standin(limit_rpm=30, limit_tpm=8000, limit_daily=1000)
+        await self._configure_standin(limit_rpm=30, limit_tpm=7000, limit_daily=1000)
         runner = ResilientPipelineRunner(llm_client=self.client)
 
         t0 = time.perf_counter()
@@ -209,7 +209,7 @@ class LoadGenerator:
         print(f"--- Running Scenario: SUSTAINED OVERLOAD ({num_requests} requests, 1 every {interval_seconds}s vs 20 RPM limit) ---")
         print(f"{'='*60}")
 
-        await self._configure_standin(limit_rpm=20, limit_tpm=8000, limit_daily=1000)
+        await self._configure_standin(limit_rpm=20, limit_tpm=7000, limit_daily=1000)
         runner = ResilientPipelineRunner(llm_client=self.client)
 
         results: List[PipelineResult] = []

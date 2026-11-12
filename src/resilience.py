@@ -28,7 +28,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.llm_client import LLMClient, LLMResponse
-from src.pipeline import PipelineResult, RelayPipeline, log_result_to_csv
+from src.pipeline import PipelineResult, RelayPipeline, log_result_to_csv, log_result_to_sidecar
 
 
 # Status codes safe to retry
@@ -358,6 +358,35 @@ class ResilientPipelineRunner:
         skip_verifier = is_degraded
 
         queue_wait_ms = (time.perf_counter() - t_enqueue) * 1000.0
+        rem_deadline = self.resilience.config.request_deadline_seconds - (queue_wait_ms / 1000.0)
+
+        # If queue wait alone consumed the deadline, drop and timeout immediately
+        if rem_deadline <= 0.05:
+            self.resilience.shed_requests_count += 1
+            timeout_res = PipelineResult(
+                request_id=req_id,
+                scenario=scenario,
+                source=self.llm.backend,
+                start_time=datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                question=question,
+                final_answer="Request timed out while waiting in queue before execution.",
+                status="timeout",
+                first_token_ms=0.0,
+                total_ms=queue_wait_ms,
+                retries=0,
+                tokens_in=0,
+                tokens_out=0,
+                retrieval_setting="timeout_in_queue",
+                answer_grade="wrong",
+                citations=[],
+            )
+            log_result_to_csv(timeout_res)
+            log_result_to_sidecar(
+                timeout_res,
+                deadline_seconds=self.resilience.config.request_deadline_seconds,
+                user_visible_ttft_ms=queue_wait_ms,
+            )
+            return timeout_res
 
         # Enqueue item in bounded queue
         try:
@@ -373,7 +402,7 @@ class ResilientPipelineRunner:
                 final_answer="Server is currently overloaded. Request was shed to protect system stability.",
                 status="error",
                 first_token_ms=0.0,
-                total_ms=0.0,
+                total_ms=queue_wait_ms,
                 retries=0,
                 tokens_in=0,
                 tokens_out=0,
@@ -382,6 +411,11 @@ class ResilientPipelineRunner:
                 citations=[],
             )
             log_result_to_csv(res)
+            log_result_to_sidecar(
+                res,
+                deadline_seconds=self.resilience.config.request_deadline_seconds,
+                user_visible_ttft_ms=queue_wait_ms,
+            )
             return res
 
         try:
@@ -399,7 +433,7 @@ class ResilientPipelineRunner:
             if is_degraded:
                 pipeline.retrieval_setting = f"degraded_{active_retriever}_k{active_top_k}"
 
-            # Execute pipeline with deadline wrapper
+            # Execute pipeline with remaining deadline
             try:
                 result = await asyncio.wait_for(
                     pipeline.run(
@@ -407,9 +441,11 @@ class ResilientPipelineRunner:
                         scenario=scenario,
                         request_id=req_id,
                         queue_wait_ms=queue_wait_ms,
+                        t_system_start=t_enqueue,
+                        deadline_seconds=self.resilience.config.request_deadline_seconds,
                         log_to_csv_now=False,
                     ),
-                    timeout=self.resilience.config.request_deadline_seconds,
+                    timeout=max(0.01, rem_deadline),
                 )
                 result.retries = proxy_llm.total_retries
 
@@ -420,6 +456,11 @@ class ResilientPipelineRunner:
                     result.answer_grade = grade_res.grade
 
                 log_result_to_csv(result)
+                log_result_to_sidecar(
+                    result,
+                    deadline_seconds=self.resilience.config.request_deadline_seconds,
+                    user_visible_ttft_ms=result.total_ms,
+                )
                 return result
             except asyncio.TimeoutError:
                 total_elapsed_ms = (time.perf_counter() - t_enqueue) * 1000.0
@@ -429,10 +470,10 @@ class ResilientPipelineRunner:
                     source=self.llm.backend,
                     start_time=datetime.datetime.now(datetime.timezone.utc).isoformat(),
                     question=question,
-                    final_answer="Request timed out after exceeding 8.0s deadline.",
+                    final_answer=f"Request timed out after exceeding {self.resilience.config.request_deadline_seconds:.1f}s deadline.",
                     status="timeout",
                     first_token_ms=0.0,
-                    total_ms=total_elapsed_ms,
+                    total_ms=min(total_elapsed_ms, self.resilience.config.request_deadline_seconds * 1000.0 + 100.0),
                     retries=proxy_llm.total_retries,
                     tokens_in=0,
                     tokens_out=0,
@@ -441,7 +482,13 @@ class ResilientPipelineRunner:
                     citations=[],
                 )
                 log_result_to_csv(timeout_res)
+                log_result_to_sidecar(
+                    timeout_res,
+                    deadline_seconds=self.resilience.config.request_deadline_seconds,
+                    user_visible_ttft_ms=timeout_res.total_ms,
+                )
                 return timeout_res
+
         finally:
             try:
                 self.resilience.queue.get_nowait()

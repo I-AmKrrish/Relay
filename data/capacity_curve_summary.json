@@ -1,0 +1,67 @@
+[
+  {
+    "offered_rate_apm": 1.0,
+    "requests_sent": 3,
+    "successful_ok": 3,
+    "success_rate_pct": 100.0,
+    "rate_limited_or_retried_count": 0,
+    "rate_limited_pct": 0.0,
+    "timeout_count": 0,
+    "effective_throughput_apm": 1.45,
+    "tokens_in_per_minute": 3243.6,
+    "mean_latency_ms": 3866.1,
+    "token_limit_bound": false
+  },
+  {
+    "offered_rate_apm": 2.0,
+    "requests_sent": 3,
+    "successful_ok": 3,
+    "success_rate_pct": 100.0,
+    "rate_limited_or_retried_count": 0,
+    "rate_limited_pct": 0.0,
+    "timeout_count": 0,
+    "effective_throughput_apm": 2.82,
+    "tokens_in_per_minute": 6305.9,
+    "mean_latency_ms": 3201.8,
+    "token_limit_bound": false
+  },
+  {
+    "offered_rate_apm": 3.0,
+    "requests_sent": 3,
+    "successful_ok": 2,
+    "success_rate_pct": 66.7,
+    "rate_limited_or_retried_count": 0,
+    "rate_limited_pct": 0.0,
+    "timeout_count": 1,
+    "effective_throughput_apm": 2.5,
+    "tokens_in_per_minute": 4618.8,
+    "mean_latency_ms": 4830.3,
+    "token_limit_bound": false
+  },
+  {
+    "offered_rate_apm": 4.0,
+    "requests_sent": 3,
+    "successful_ok": 1,
+    "success_rate_pct": 33.3,
+    "rate_limited_or_retried_count": 2,
+    "rate_limited_pct": 66.7,
+    "timeout_count": 2,
+    "effective_throughput_apm": 1.58,
+    "tokens_in_per_minute": 1709.2,
+    "mean_latency_ms": 6769.8,
+    "token_limit_bound": false
+  },
+  {
+    "offered_rate_apm": 6.0,
+    "requests_sent": 3,
+    "successful_ok": 0,
+    "success_rate_pct": 0.0,
+    "rate_limited_or_retried_count": 2,
+    "rate_limited_pct": 66.7,
+    "timeout_count": 3,
+    "effective_throughput_apm": 0.0,
+    "tokens_in_per_minute": 0.0,
+    "mean_latency_ms": 8041.9,
+    "token_limit_bound": false
+  }
+]

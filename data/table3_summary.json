@@ -2,28 +2,25 @@
   {
     "setting": "Setting A (256-tok, top-3 BM25)",
     "setting_id": "bm25_k3_c256",
-    "quality_accuracy_pct": 56.25,
-    "avg_tokens_per_answer": 1923.6875,
-    "avg_ttft_ms": 47.97506500021882,
-    "avg_total_ms": 161.76342500011742,
+    "variable_isolated": "Baseline (Lexical)",
+    "completed_ok": 13,
+    "total_offered": 16,
+    "quality_accuracy_pct": 53.8,
+    "avg_tokens_per_answer": 2657.4,
+    "avg_ttft_ms": 887.6,
+    "avg_total_ms": 3111.0,
     "cheap_under_limit": true
   },
   {
-    "setting": "Setting B (512-tok, top-5 Dense)",
-    "setting_id": "dense_k5_c512",
-    "quality_accuracy_pct": 37.5,
-    "avg_tokens_per_answer": 2854.3125,
-    "avg_ttft_ms": 47.064720000253146,
-    "avg_total_ms": 146.68395000012424,
-    "cheap_under_limit": false
-  },
-  {
-    "setting": "Setting C (256-tok, top-8 Rerank)",
-    "setting_id": "rerank_k3_c256",
-    "quality_accuracy_pct": 56.25,
-    "avg_tokens_per_answer": 2028.3125,
-    "avg_ttft_ms": 45.61766749998242,
-    "avg_total_ms": 192.19507500019972,
+    "setting": "Setting B (256-tok, top-3 Dense BGE)",
+    "setting_id": "dense_k3_c256",
+    "variable_isolated": "Retriever: Dense BGE vs BM25 (chunk=256 held constant)",
+    "completed_ok": 8,
+    "total_offered": 16,
+    "quality_accuracy_pct": 62.5,
+    "avg_tokens_per_answer": 2421.2,
+    "avg_ttft_ms": 801.2,
+    "avg_total_ms": 2782.7,
     "cheap_under_limit": true
   }
 ]

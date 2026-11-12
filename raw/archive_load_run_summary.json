@@ -1,0 +1,18 @@
+{
+  "timestamp_utc": "2026-11-12T14:59:23.980099+00:00",
+  "backend": "stand-in",
+  "summary": {
+    "steady": {
+      "total_offered": 5,
+      "ok_count": 5,
+      "rate_limited_count": 0,
+      "timeout_count": 0,
+      "error_count": 0,
+      "shed_count": 0,
+      "degraded_count": 0,
+      "avg_retries": 0.0,
+      "p50_total_ms": 1485.4,
+      "success_rate_pct": 100.0
+    }
+  }
+}

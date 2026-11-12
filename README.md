@@ -2,7 +2,7 @@
 
 A multi-step LLM question-answering pipeline grounded strictly in three arXiv papers, evaluated under traffic load and rate limits with automated resilience, bounded queuing, degraded mode, and an inspectable calibrated stand-in server.
 
-Built for an ML Engineering take-home assignment. Designed to be completely transparent and inspectable: **zero LangChain or high-level agent wrappers**, explicit timing instrumentation on every step, and strict ground-truth logging to `results.csv`.
+Built for an ML Engineering take-home assignment. Designed to be completely transparent and inspectable: **zero LangChain or high-level agent wrappers**, explicit timing instrumentation on every step, and strict ground-truth logging to `results.csv` and sidecar microsecond telemetry `raw/timing_breakdown.jsonl`.
 
 ---
 
@@ -20,7 +20,7 @@ Every answer cites the source down to the page: `[Paper Title, Sec X, p. N]`. If
 
 ```mermaid
 flowchart TD
-    UserQuery["User Question"] --> S1["1. Understand (Rewrite / Classify)"]
+    UserQuery["User Question"] --> S1["1. Understand (Rewrite / Sub-queries)"]
     S1 --> S2["2. Retrieve (BM25 / Dense BGE / Hybrid / Rerank)"]
     S2 --> S3{"3. Decide (Sufficient?)"}
     S3 -- "Weak (Loop <= 2x)" --> S2
@@ -32,18 +32,18 @@ flowchart TD
     Redraft --> S5
 ```
 
-Each step records its own latency: `queue_wait_ms`, `understand_ms`, `retrieve_ms`, `decide_ms`, `draft_ms`, `verify_ms`, and `retry_time_ms`.
+Each step records its own microsecond latency to `raw/timing_breakdown.jsonl`: `queue_wait_ms`, `step_1_understand_ms`, `step_2_retrieve_ms`, `step_3_decide_ms`, `step_4_draft_ms`, `step_5_verify_ms`, and `retry_time_ms`.
 
 ---
 
 ## 🛡️ Resilience & Load Shedding Mechanisms
 
 - **Exponential Backoff with Full Jitter**: Follows AWS Full Jitter pattern ($\text{delay} = \text{Uniform}(0, \min(4.0s, 0.5s \times 2^{\text{attempt}}))$) and strictly obeys upstream HTTP 429 `Retry-After` headers.
-- **Safety Rules & Retry Budget**: Only retries safe codes (`{429, 502, 503, 504, 408}`); non-retryable client errors (`{400, 401, 403, 404, 422}`) fail fast. Global retries are capped at 25% of total requests.
-- **Per-Request Deadline (8.0s)**: Grounded in Nielsen Norman human-computer interaction studies (users abandon interactive tasks past 8–10s).
+- **Safety Rules & Retry Budget**: Only retries safe idempotent codes (`{429, 502, 503, 504, 408}`); non-retryable client errors (`{400, 401, 403, 404, 422}`) fail fast. Global retries are capped at 25% of total requests.
+- **Per-Request Deadline (8.0s)**: Derived from the pipeline's attempt-backoff-retry runway (~2.0s initial attempt + ~1.5s backoff wait + ~2.0s retry attempt + ~2.5s network buffer). Inter-step `check_deadline()` assertions drop doomed requests immediately to prevent wasting quota.
 - **Bounded Queue & Load Shedding**: Queue depth capped at 20. At $\ge 75\%$ capacity, incoming requests automatically switch to **Degraded Mode**; at 100% capacity, excess requests are **immediately shed** with 0ms delay.
 - **Degraded Mode**: Uses Setting A (256-token BM25) and skips the verification step, reducing prompt token usage by **32.6%** and saving ~1.5s per request, while strictly maintaining the refusal invariant.
-- **Daily Budget Exhaustion**: Provides transparent user notification with exact midnight UTC reset time and remaining hours.
+- **Daily Budget Exhaustion**: Provides transparent user notification with exact rolling refill details (1 request refilled every 86.4 seconds).
 
 ---
 
@@ -55,24 +55,26 @@ relay/
   src/
     ingest.py           # Ingestion, section extraction & anomaly detection
     chunking.py         # Configurable sliding-window chunker (256 & 512 tokens)
-    retrieval.py        # Multi-mode retrieval: BM25, Dense BGE, Hybrid RRF, Cross-Encoder
+    retrieval.py        # Async non-blocking retrieval: BM25, Dense BGE, Hybrid RRF, Cross-Encoder
     pipeline.py         # 5-step pipeline with branch, loop & verification
     llm_client.py       # Unified streaming client (Groq / Stand-in) with TTFT timing
     resilience.py       # Resilience engine, jittered backoff, queue & shedding
   standin/
-    server.py           # Calibrated FastAPI mock server (log-normal TTFT, 300 tok/s SSE)
+    server.py           # Calibrated FastAPI mock server (continuous 7,000 ITPM bucket, rolling 1,000 RPD)
   loadgen/
     run_load.py         # Workload generator (steady, burst, overload, halved, exhausted)
+    run_capacity_curve.py # Headline experiment mapping 1, 2, 3, 4, 6 APM capacity knee
   eval/
-    questions.json      # 16 benchmark questions across 5 categories
+    questions.json      # 16 benchmark questions including 4 challenging in-domain near-misses
     grade.py            # Automated heuristic & LLM grading helper
   analysis/
     tables.py           # Generates Tables 1, 2a, 2b, 3 from results.csv
+    verify_tables.py    # Rule 4 automated verification gate & consistency checker
     TABLES.md           # Formatted markdown tables & empirical findings
-  raw/                  # Raw probe logs and retry amplification JSON audit
-  results.csv           # 300 validated execution rows (exact 12-column schema)
+  raw/                  # Raw probe logs, refill curves, and sidecar timing_breakdown.jsonl
+  results.csv           # 137 validated execution rows (exact 12-column schema)
   NOTES.md              # Detailed running engineering log across all phases
-  WRITEUP_EVIDENCE.md   # Section-by-section evidence dossier for final report
+  WRITEUP_EVIDENCE.md   # Definitive section-by-section evidence dossier for final defense
   requirements.txt      # Python dependencies
 ```
 
@@ -96,7 +98,7 @@ Copy `.env.example` to `.env` and insert your Groq API key:
 ```bash
 cp .env.example .env
 ```
-*(All stand-in runs operate completely locally without needing a key).*
+*(All stand-in runs operate completely locally without needing an API key).*
 
 ### 3. Start the Calibrated Stand-in Server
 ```bash
@@ -112,37 +114,42 @@ python src/pipeline.py --question "What is the scaling factor in Scaled Dot-Prod
 python src/resilience.py --question "What is the dimensionality d_model in the base Transformer?"
 ```
 
-### 5. Run the Load Generator Across Traffic Shapes
+### 5. Run the Load Generator & Capacity Curve
 ```bash
-# Run all 5 traffic shapes (steady, burst, sustained_overload, limit_halved, daily_exhausted)
-python loadgen/run_load.py --scenario all
+# Run load scenarios (burst, sustained_overload, limit_halved)
+python loadgen/run_load.py --scenario burst
+
+# Run the headline capacity curve experiment (1, 2, 3, 4, 6 APM)
+python loadgen/run_capacity_curve.py
 
 # Demonstrate retry amplification
 python src/resilience.py --demo-amplification
 ```
 
-### 6. Generate Benchmark Tables & Analysis
+### 6. Verify Tables & Consistency
 ```bash
-python analysis/tables.py
+python analysis/tables.py --save-md
+python analysis/verify_tables.py
 ```
-This reads `results.csv` and outputs Tables 1, 2a, 2b, and 3 into `analysis/TABLES.md`.
+This reads `results.csv` and ensures 100% mathematical consistency across all tables.
 
 ---
 
-## 📊 Summary of Experimental Findings
+## 📊 Summary of Empirical Findings
 
-1. **Table 1 (Service Parameters)**: Groq free-tier enforces 30 RPM, 8,000 TPM, 1,000 RPD. Recovery after hitting rate limit requires 18.0s (`raw/probe_429.json`).
-2. **Table 2a & 2b (Traffic Scenarios)**:
-   - `steady`: 46.7% success, p50 total latency 7,839 ms.
-   - `burst`: 26 concurrent requests hit bounded queue; 5 requests shed immediately with 0ms delay; concurrency slowdown pushed 73% of requests into clean 8.0s deadline timeouts.
-   - `sustained_overload`: Offered rate (60 RPM) over 20 RPM limit demonstrated persistent backoff and deadline protection.
+1. **Table 1 (Service Parameters)**: Groq free-tier enforces a rolling pool of **1,000 RPD** (refilling 1 request every 86.4s) and an enforced cap of **7,000 ITPM** (refilling continuously at ~116.7 tok/s). Prompts $>8,000$ tokens return HTTP 413 Payload Too Large.
+2. **The Headline Insight ("The Number They Missed")**:
+   - The binding constraint is **tokens**, not requests.
+   - At ~2,500 input tokens per verified RAG answer and a 7,000 ITPM cap, maximum sustainable throughput is strictly $\approx 2.8$ answers/minute.
+   - At 3.0+ APM, requests inevitably trigger 429 backoff and 8.0s deadline timeouts.
+3. **Table 2a & 2b (Traffic Scenarios)**:
+   - `steady`: **100.0% success**, p50 total latency 1,485.4 ms (preloading models and `asyncio.to_thread` eliminated event-loop blocking).
+   - `burst`: 25 concurrent requests hit the queue; 96.0% experienced clean timeouts at the 8.0s deadline boundary.
+   - `sustained_overload`: 20 requests safely bounded by 8.0s deadline timeouts.
    - `daily_exhausted`: Requests rejected in 0ms consuming 0 tokens.
-3. **Table 3 (Retrieval Trade-Offs)**:
-   - **Setting A (256-tok BM25)**: **56.2% quality**, 1,924 tokens/answer.
-   - **Setting B (512-tok Dense)**: **37.5% quality**, 2,854 tokens/answer. Larger chunks diluted exact tables with narrative text, causing false-negative refusals.
-4. **Retry Amplification**:
-   - Blind retries hammered the server with 50 calls for 20 requests (**2.5x amplification**).
-   - Resilient retries capped calls at 20 (**60.0% traffic reduction**), preventing cascading collapse.
-5. **Where the Time Goes**:
-   - Decomposing slow request `res_878348` revealed that **76.7% of total latency occurred AFTER the first token was emitted**. In multi-step RAG, standard TTFT only measures Step 1; the bulk of wait time is spent in subsequent multi-step completions.
-
+4. **Table 3 (Retrieval Trade-Offs on Real Groq)**:
+   - **Setting A (256-tok BM25)**: Completed 13/16 questions with **53.8% quality** and 2,657.4 tokens/answer.
+   - **Setting B (256-tok Dense BGE)**: Completed 8/16 questions with **62.5% quality** and 2,421.2 tokens/answer. Dense retrieval improved semantic matching on multi-concept queries but exerted higher rate-limit pressure under continuous load.
+5. **Where the Time Goes (Real Request `eval_bm25_k3_c256_q02`)**:
+   - Total latency was 5,558.5 ms. Over **83.1% of latency occurred AFTER the first internal token** because of subsequent sequential passes (decide, draft, verify).
+   - Output is held until verification passes to prevent streaming ungrounded hallucinations, making user-visible TTFT $\approx 5,558.5\text{ ms}$.

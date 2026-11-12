@@ -112,6 +112,48 @@ def log_result_to_csv(result: PipelineResult, csv_path: Path = PROJECT_ROOT / "r
         ])
 
 
+def log_result_to_sidecar(
+    result: PipelineResult,
+    sidecar_path: Path = PROJECT_ROOT / "raw/timing_breakdown.jsonl",
+    deadline_seconds: float = 8.0,
+    user_visible_ttft_ms: Optional[float] = None,
+):
+    """
+    Append detailed per-step microsecond telemetry to sidecar JSONL keyed by request_id.
+    Captures both internal LLM first token and true user-visible TTFT (post-verification).
+    """
+    sidecar_path.parent.mkdir(parents=True, exist_ok=True)
+    uv_ttft = user_visible_ttft_ms if user_visible_ttft_ms is not None else result.total_ms
+    data = {
+        "request_id": result.request_id,
+        "scenario": result.scenario,
+        "source": result.source,
+        "retrieval_setting": result.retrieval_setting,
+        "status": result.status,
+        "queue_wait_ms": round(result.timing.queue_wait_ms, 2),
+        "step_1_understand_ms": round(result.timing.understand_ms, 2),
+        "step_2_retrieve_ms": round(result.timing.retrieve_ms, 2),
+        "step_3_decide_ms": round(result.timing.decide_ms, 2),
+        "step_4_draft_ms": round(result.timing.draft_ms, 2),
+        "step_5_verify_ms": round(result.timing.verify_ms, 2),
+        "retry_time_ms": round(result.timing.retry_time_ms, 2),
+        "internal_first_token_ms": round(result.first_token_ms, 2),
+        "user_visible_ttft_ms": round(uv_ttft, 2),
+        "total_ms": round(result.total_ms, 2),
+        "retries": result.retries,
+        "loop_count": result.loop_count,
+        "tokens_in": result.tokens_in,
+        "tokens_out": result.tokens_out,
+        "answer_grade": result.answer_grade,
+        "deadline_seconds": deadline_seconds,
+        "timed_out": result.status == "timeout",
+        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+    }
+    with open(sidecar_path, "a", encoding="utf-8") as f:
+        f.write(json.dumps(data) + "\n")
+
+
+
 class RelayPipeline:
     """The 5-step RAG pipeline."""
 
@@ -167,12 +209,14 @@ class RelayPipeline:
             search_query = question
         return search_query, resp
 
-    def step_2_retrieve(self, query: str, top_k: Optional[int] = None) -> List[SearchResult]:
+    async def step_2_retrieve(self, query: str, top_k: Optional[int] = None) -> List[SearchResult]:
         """
-        Step 2: Tool call over the paper library.
+        Step 2: Tool call over the paper library (unblocked async execution).
         """
         k = top_k or self.top_k
-        return self.retriever.retrieve(query, top_k=k)
+        if hasattr(self.retriever, "aretrieve"):
+            return await self.retriever.aretrieve(query, top_k=k)
+        return await asyncio.to_thread(self.retriever.retrieve, query, top_k=k)
 
     async def step_3_decide(
         self, question: str, results: List[SearchResult]
@@ -324,14 +368,17 @@ class RelayPipeline:
         scenario: str = "interactive",
         request_id: Optional[str] = None,
         queue_wait_ms: float = 0.0,
+        t_system_start: Optional[float] = None,
+        deadline_seconds: float = 8.0,
         log_to_csv_now: bool = True,
     ) -> PipelineResult:
         """
-        Execute the full 5-step pipeline end-to-end with timing instrumentation.
+        Execute the full 5-step pipeline end-to-end with timing instrumentation,
+        strict inter-step deadline cancellation, and sidecar JSONL telemetry.
         """
         req_id = request_id or f"req_{uuid.uuid4().hex[:8]}"
         start_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
-        t0 = time.perf_counter()
+        t_start = t_system_start if t_system_start is not None else (time.perf_counter() - (queue_wait_ms / 1000.0))
 
         timing = TimingBreakdown(queue_wait_ms=queue_wait_ms)
         tokens_in = 0
@@ -341,54 +388,148 @@ class RelayPipeline:
         first_token_ms: float = 0.0
         final_status = "ok"
 
-        # Step 1: Understand
-        t_s1 = time.perf_counter()
-        search_query, u_resp = await self.step_1_understand(question)
-        timing.understand_ms = (time.perf_counter() - t_s1) * 1000.0
-        tokens_in += u_resp.tokens_in
-        tokens_out += u_resp.tokens_out
-        if u_resp.status != "ok":
-            final_status = u_resp.status
+        def check_deadline():
+            elapsed = time.perf_counter() - t_start
+            if elapsed >= deadline_seconds:
+                raise asyncio.TimeoutError(
+                    f"Request deadline of {deadline_seconds}s exceeded (elapsed: {elapsed:.2f}s)"
+                )
 
-        # Step 2: Retrieve (Initial)
-        t_s2 = time.perf_counter()
-        retrieved_docs = self.step_2_retrieve(search_query)
-        timing.retrieve_ms = (time.perf_counter() - t_s2) * 1000.0
+        try:
+            # Step 1: Understand
+            check_deadline()
+            t_s1 = time.perf_counter()
+            search_query, u_resp = await self.step_1_understand(question)
+            timing.understand_ms = (time.perf_counter() - t_s1) * 1000.0
+            tokens_in += u_resp.tokens_in
+            tokens_out += u_resp.tokens_out
+            if u_resp.status != "ok":
+                final_status = u_resp.status
 
-        # Step 3: Decide (Branch / Loop)
-        t_s3 = time.perf_counter()
-        decision, alternate_query, d_resp = await self.step_3_decide(question, retrieved_docs)
-        timing.decide_ms = (time.perf_counter() - t_s3) * 1000.0
-        tokens_in += d_resp.tokens_in
-        tokens_out += d_resp.tokens_out
-        if d_resp.status != "ok":
-            final_status = d_resp.status
+            # Step 2: Retrieve (Initial)
+            check_deadline()
+            t_s2 = time.perf_counter()
+            retrieved_docs = await self.step_2_retrieve(search_query)
+            timing.retrieve_ms = (time.perf_counter() - t_s2) * 1000.0
 
-        # Loop: Re-retrieve if decision is weak and loops allowed
-        while decision == "weak" and loop_count < self.max_loops:
-            loop_count += 1
-            retries += 1
-            t_loop_start = time.perf_counter()
-            query_to_use = alternate_query if alternate_query else f"{question} details"
-            more_docs = self.step_2_retrieve(query_to_use)
-            # Merge unique chunks
-            seen_cids = {d.chunk_id for d in retrieved_docs}
-            for d in more_docs:
-                if d.chunk_id not in seen_cids:
-                    retrieved_docs.append(d)
-                    seen_cids.add(d.chunk_id)
+            # Step 3: Decide (Branch / Loop)
+            check_deadline()
+            t_s3 = time.perf_counter()
+            decision, alternate_query, d_resp = await self.step_3_decide(question, retrieved_docs)
+            timing.decide_ms = (time.perf_counter() - t_s3) * 1000.0
+            tokens_in += d_resp.tokens_in
+            tokens_out += d_resp.tokens_out
+            if d_resp.status != "ok":
+                final_status = d_resp.status
 
-            decision, alternate_query, loop_d_resp = await self.step_3_decide(question, retrieved_docs)
-            timing.retry_time_ms += (time.perf_counter() - t_loop_start) * 1000.0
-            tokens_in += loop_d_resp.tokens_in
-            tokens_out += loop_d_resp.tokens_out
+            # Loop: Re-retrieve if decision is weak and loops allowed
+            while decision == "weak" and loop_count < self.max_loops:
+                check_deadline()
+                loop_count += 1
+                retries += 1
+                t_loop_start = time.perf_counter()
+                query_to_use = alternate_query if alternate_query else f"{question} details"
+                more_docs = await self.step_2_retrieve(query_to_use)
+                # Merge unique chunks
+                seen_cids = {d.chunk_id for d in retrieved_docs}
+                for d in more_docs:
+                    if d.chunk_id not in seen_cids:
+                        retrieved_docs.append(d)
+                        seen_cids.add(d.chunk_id)
 
-        # Branch to Refusal if unsupported
-        if decision == "unsupported":
-            final_answer = "The papers do not say."
-            total_ms = (time.perf_counter() - t0) * 1000.0
+                check_deadline()
+                decision, alternate_query, loop_d_resp = await self.step_3_decide(question, retrieved_docs)
+                timing.retry_time_ms += (time.perf_counter() - t_loop_start) * 1000.0
+                tokens_in += loop_d_resp.tokens_in
+                tokens_out += loop_d_resp.tokens_out
+
+            # Branch to Refusal if unsupported
+            if decision == "unsupported":
+                final_answer = "The papers do not say."
+                total_ms = (time.perf_counter() - t_start) * 1000.0
+                timing.total_ms = total_ms
+                user_ttft_ms = total_ms
+                res = PipelineResult(
+                    request_id=req_id,
+                    scenario=scenario,
+                    source=self.llm.backend,
+                    start_time=start_iso,
+                    question=question,
+                    final_answer=final_answer,
+                    status=final_status,
+                    first_token_ms=timing.understand_ms,
+                    total_ms=total_ms,
+                    retries=retries,
+                    tokens_in=tokens_in,
+                    tokens_out=tokens_out + 6,
+                    retrieval_setting=self.retrieval_setting,
+                    answer_grade="refused_correctly" if "the papers do not say" in final_answer.lower() else "wrong",
+                    citations=[],
+                    timing=timing,
+                    verification_passed=True,
+                    loop_count=loop_count,
+                )
+                if log_to_csv_now:
+                    log_result_to_csv(res)
+                log_result_to_sidecar(res, deadline_seconds=deadline_seconds, user_visible_ttft_ms=user_ttft_ms)
+                return res
+
+            # Step 4: Draft Answer
+            check_deadline()
+            t_s4 = time.perf_counter()
+            draft, draft_resp = await self.step_4_draft(question, retrieved_docs[:self.top_k])
+            timing.draft_ms = (time.perf_counter() - t_s4) * 1000.0
+            tokens_in += draft_resp.tokens_in
+            tokens_out += draft_resp.tokens_out
+            first_token_ms = draft_resp.first_token_ms
+            if draft_resp.status != "ok":
+                final_status = draft_resp.status
+
+            # Step 5: Verify
+            check_deadline()
+            t_s5 = time.perf_counter()
+            passed, critique, v_resp = await self.step_5_verify(question, draft, retrieved_docs[:self.top_k])
+            timing.verify_ms = (time.perf_counter() - t_s5) * 1000.0
+            tokens_in += v_resp.tokens_in
+            tokens_out += v_resp.tokens_out
+            if v_resp.status != "ok":
+                final_status = v_resp.status
+
+            final_answer = draft
+            # Redraft once on failure
+            if not passed and not self.skip_verification:
+                check_deadline()
+                retries += 1
+                t_redraft = time.perf_counter()
+                redraft, redraft_resp = await self.step_4_draft(
+                    question, retrieved_docs[:self.top_k], critique=critique
+                )
+                timing.retry_time_ms += (time.perf_counter() - t_redraft) * 1000.0
+                tokens_in += redraft_resp.tokens_in
+                tokens_out += redraft_resp.tokens_out
+
+                # Second verification
+                check_deadline()
+                t_v2 = time.perf_counter()
+                passed2, _, v2_resp = await self.step_5_verify(question, redraft, retrieved_docs[:self.top_k])
+                timing.retry_time_ms += (time.perf_counter() - t_v2) * 1000.0
+                tokens_in += v2_resp.tokens_in
+                tokens_out += v2_resp.tokens_out
+
+                if passed2:
+                    final_answer = redraft
+                else:
+                    final_answer = "The papers do not say."
+                    passed = False
+
+            total_ms = (time.perf_counter() - t_start) * 1000.0
             timing.total_ms = total_ms
-            res = PipelineResult(
+            user_ttft_ms = total_ms
+
+            # Extract citations like [Paper, Sec X, p. N]
+            found_citations = re.findall(r"\[[^\]]+?,\s*p\.\s*\d+\]", final_answer)
+
+            result = PipelineResult(
                 request_id=req_id,
                 scenario=scenario,
                 source=self.llm.backend,
@@ -396,96 +537,52 @@ class RelayPipeline:
                 question=question,
                 final_answer=final_answer,
                 status=final_status,
-                first_token_ms=timing.understand_ms,
+                first_token_ms=first_token_ms,
                 total_ms=total_ms,
                 retries=retries,
                 tokens_in=tokens_in,
-                tokens_out=tokens_out + 6,
+                tokens_out=tokens_out,
                 retrieval_setting=self.retrieval_setting,
                 answer_grade="refused_correctly" if "the papers do not say" in final_answer.lower() else "wrong",
+                citations=found_citations,
+                timing=timing,
+                verification_passed=passed,
+                loop_count=loop_count,
+            )
+
+            if log_to_csv_now:
+                log_result_to_csv(result)
+            log_result_to_sidecar(result, deadline_seconds=deadline_seconds, user_visible_ttft_ms=user_ttft_ms)
+            return result
+
+        except asyncio.TimeoutError:
+            total_ms = (time.perf_counter() - t_start) * 1000.0
+            timing.total_ms = total_ms
+            timeout_res = PipelineResult(
+                request_id=req_id,
+                scenario=scenario,
+                source=self.llm.backend,
+                start_time=start_iso,
+                question=question,
+                final_answer=f"Request cancelled: exceeded {deadline_seconds}s deadline.",
+                status="timeout",
+                first_token_ms=0.0,
+                total_ms=total_ms,
+                retries=retries,
+                tokens_in=tokens_in,
+                tokens_out=tokens_out,
+                retrieval_setting=f"timeout_deadline_{deadline_seconds}s",
+                answer_grade="wrong",
                 citations=[],
                 timing=timing,
-                verification_passed=True,
+                verification_passed=False,
                 loop_count=loop_count,
             )
             if log_to_csv_now:
-                log_result_to_csv(res)
-            return res
+                log_result_to_csv(timeout_res)
+            log_result_to_sidecar(timeout_res, deadline_seconds=deadline_seconds, user_visible_ttft_ms=total_ms)
+            return timeout_res
 
-        # Step 4: Draft Answer
-        t_s4 = time.perf_counter()
-        draft, draft_resp = await self.step_4_draft(question, retrieved_docs[:self.top_k])
-        timing.draft_ms = (time.perf_counter() - t_s4) * 1000.0
-        tokens_in += draft_resp.tokens_in
-        tokens_out += draft_resp.tokens_out
-        first_token_ms = draft_resp.first_token_ms
-        if draft_resp.status != "ok":
-            final_status = draft_resp.status
-
-        # Step 5: Verify
-        t_s5 = time.perf_counter()
-        passed, critique, v_resp = await self.step_5_verify(question, draft, retrieved_docs[:self.top_k])
-        timing.verify_ms = (time.perf_counter() - t_s5) * 1000.0
-        tokens_in += v_resp.tokens_in
-        tokens_out += v_resp.tokens_out
-        if v_resp.status != "ok":
-            final_status = v_resp.status
-
-        final_answer = draft
-        # Redraft once on failure
-        if not passed and not self.skip_verification:
-            retries += 1
-            t_redraft = time.perf_counter()
-            redraft, redraft_resp = await self.step_4_draft(
-                question, retrieved_docs[:self.top_k], critique=critique
-            )
-            timing.retry_time_ms += (time.perf_counter() - t_redraft) * 1000.0
-            tokens_in += redraft_resp.tokens_in
-            tokens_out += redraft_resp.tokens_out
-
-            # Second verification
-            t_v2 = time.perf_counter()
-            passed2, _, v2_resp = await self.step_5_verify(question, redraft, retrieved_docs[:self.top_k])
-            timing.retry_time_ms += (time.perf_counter() - t_v2) * 1000.0
-            tokens_in += v2_resp.tokens_in
-            tokens_out += v2_resp.tokens_out
-
-            if passed2:
-                final_answer = redraft
-            else:
-                final_answer = "The papers do not say."
-                passed = False
-
-        total_ms = (time.perf_counter() - t0) * 1000.0
-        timing.total_ms = total_ms
-
-        # Extract citations like [Paper, Sec X, p. N]
-        found_citations = re.findall(r"\[[^\]]+?,\s*p\.\s*\d+\]", final_answer)
-
-        result = PipelineResult(
-            request_id=req_id,
-            scenario=scenario,
-            source=self.llm.backend,
-            start_time=start_iso,
-            question=question,
-            final_answer=final_answer,
-            status=final_status,
-            first_token_ms=first_token_ms,
-            total_ms=total_ms,
-            retries=retries,
-            tokens_in=tokens_in,
-            tokens_out=tokens_out,
-            retrieval_setting=self.retrieval_setting,
-            answer_grade="refused_correctly" if "the papers do not say" in final_answer.lower() else "wrong",
-            citations=found_citations,
-            timing=timing,
-            verification_passed=passed,
-            loop_count=loop_count,
-        )
-
-        if log_to_csv_now:
-            log_result_to_csv(result)
-        return result
 
 
 async def main():

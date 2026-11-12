@@ -12,9 +12,11 @@ All retrieved results preserve structured metadata and strict citations:
 """
 
 import argparse
+import asyncio
 import json
 import re
 import sys
+import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -28,6 +30,62 @@ import numpy as np
 from rank_bm25 import BM25Okapi
 
 from src.chunking import TextChunk, chunk_library
+
+
+# Global singleton model caches to prevent redundant loading freezes (BGE ~48s, CrossEncoder ~21s)
+_MODEL_CACHE: Dict[str, Any] = {}
+_RETRIEVAL_SEMAPHORE: Optional[asyncio.Semaphore] = None
+
+
+def get_retrieval_semaphore(max_concurrent: int = 4) -> asyncio.Semaphore:
+    """Cap concurrent CPU retrieval tasks to avoid event loop starvation and thread thrashing."""
+    global _RETRIEVAL_SEMAPHORE
+    if _RETRIEVAL_SEMAPHORE is None:
+        _RETRIEVAL_SEMAPHORE = asyncio.Semaphore(max_concurrent)
+    return _RETRIEVAL_SEMAPHORE
+
+
+def get_sentence_transformer(model_name: str = "BAAI/bge-small-en-v1.5") -> Any:
+    """Retrieve or initialize cached SentenceTransformer singleton."""
+    if model_name not in _MODEL_CACHE:
+        try:
+            from sentence_transformers import SentenceTransformer
+            print(f"Loading SentenceTransformer: {model_name}...")
+            t0 = time.perf_counter()
+            _MODEL_CACHE[model_name] = SentenceTransformer(model_name)
+            print(f"Loaded {model_name} in {(time.perf_counter() - t0):.2f}s")
+        except ImportError:
+            raise ImportError(
+                "sentence-transformers is required for EmbeddingRetriever. "
+                "Install via: pip install sentence-transformers"
+            )
+    return _MODEL_CACHE[model_name]
+
+
+def get_cross_encoder(model_name: str = "cross-encoder/ms-marco-MiniLM-L-6-v2") -> Any:
+    """Retrieve or initialize cached CrossEncoder singleton."""
+    if model_name not in _MODEL_CACHE:
+        try:
+            from sentence_transformers import CrossEncoder
+            print(f"Loading CrossEncoder: {model_name}...")
+            t0 = time.perf_counter()
+            _MODEL_CACHE[model_name] = CrossEncoder(model_name)
+            print(f"Loaded {model_name} in {(time.perf_counter() - t0):.2f}s")
+        except ImportError:
+            raise ImportError(
+                "sentence-transformers is required for CrossEncoderReRanker. "
+                "Install via: pip install sentence-transformers"
+            )
+    return _MODEL_CACHE[model_name]
+
+
+def preload_all_models():
+    """Pre-load neural models into memory at application/server startup to eliminate lazy-load latency."""
+    print("Pre-loading retrieval neural models...")
+    t0 = time.perf_counter()
+    get_sentence_transformer("BAAI/bge-small-en-v1.5")
+    get_cross_encoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
+    print(f"All retrieval neural models ready in {(time.perf_counter() - t0):.2f}s")
 
 
 @dataclass
@@ -88,6 +146,12 @@ class BM25Retriever:
             )
         return results
 
+    async def aretrieve(self, query: str, top_k: int = 5) -> List[SearchResult]:
+        """Async unblocked retrieval run on thread pool with semaphore rate control."""
+        sem = get_retrieval_semaphore()
+        async with sem:
+            return await asyncio.to_thread(self.retrieve, query, top_k=top_k)
+
 
 class EmbeddingRetriever:
     """
@@ -101,18 +165,10 @@ class EmbeddingRetriever:
         model_name: str = "BAAI/bge-small-en-v1.5",
         cache_path: Optional[Path] = None,
     ):
-        try:
-            from sentence_transformers import SentenceTransformer
-        except ImportError:
-            raise ImportError(
-                "sentence-transformers is required for EmbeddingRetriever. "
-                "Install via: pip install sentence-transformers"
-            )
-
         self.chunks = chunks
         self.model_name = model_name
         self.cache_path = cache_path
-        self.model = SentenceTransformer(model_name)
+        self.model = get_sentence_transformer(model_name)
         self.chunk_embeddings = self._get_or_compute_embeddings()
 
     def _get_or_compute_embeddings(self) -> np.ndarray:
@@ -174,6 +230,12 @@ class EmbeddingRetriever:
             )
         return results
 
+    async def aretrieve(self, query: str, top_k: int = 5) -> List[SearchResult]:
+        """Async unblocked retrieval run on thread pool with semaphore rate control."""
+        sem = get_retrieval_semaphore()
+        async with sem:
+            return await asyncio.to_thread(self.retrieve, query, top_k=top_k)
+
 
 class HybridRetriever:
     """
@@ -222,6 +284,12 @@ class HybridRetriever:
             )
         return results
 
+    async def aretrieve(self, query: str, top_k: int = 5) -> List[SearchResult]:
+        """Async unblocked retrieval run on thread pool with semaphore rate control."""
+        sem = get_retrieval_semaphore()
+        async with sem:
+            return await asyncio.to_thread(self.retrieve, query, top_k=top_k)
+
 
 class CrossEncoderReRanker:
     """
@@ -230,9 +298,8 @@ class CrossEncoderReRanker:
     """
 
     def __init__(self, model_name: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"):
-        from sentence_transformers import CrossEncoder
-
-        self.model = CrossEncoder(model_name)
+        self.model_name = model_name
+        self.model = get_cross_encoder(model_name)
 
     def rerank(self, query: str, candidates: List[SearchResult], top_k: int = 5) -> List[SearchResult]:
         if not candidates:
@@ -262,6 +329,17 @@ class CrossEncoderReRanker:
             )
         return reranked
 
+    async def arerank(self, query: str, candidates: List[SearchResult], top_k: int = 5) -> List[SearchResult]:
+        """Async unblocked reranking run on thread pool with semaphore rate control."""
+        sem = get_retrieval_semaphore()
+        async with sem:
+            return await asyncio.to_thread(self.rerank, query, candidates, top_k=top_k)
+
+
+
+_CHUNKS_CACHE: Dict[Tuple[int, int], List[TextChunk]] = {}
+_RETRIEVER_INSTANCE_CACHE: Dict[Tuple[str, int, int], Tuple[Any, List[TextChunk]]] = {}
+
 
 def get_retriever(
     mode: str = "bm25",
@@ -270,11 +348,19 @@ def get_retriever(
     chunks_path: Optional[Path] = None,
     extracted_pages_path: Path = Path("data/papers/extracted_pages.json"),
 ) -> Tuple[Any, List[TextChunk]]:
-    """Factory function for initializing retrievers."""
-    if chunks_path and chunks_path.exists():
+    """Factory function for initializing retrievers with singleton instance caching."""
+    cache_key = (mode, chunk_size, overlap)
+    if cache_key in _RETRIEVER_INSTANCE_CACHE:
+        return _RETRIEVER_INSTANCE_CACHE[cache_key]
+
+    chunk_key = (chunk_size, overlap)
+    if chunk_key in _CHUNKS_CACHE:
+        chunks = _CHUNKS_CACHE[chunk_key]
+    elif chunks_path and chunks_path.exists():
         with open(chunks_path, "r", encoding="utf-8") as f:
             raw_chunks = json.load(f)
             chunks = [TextChunk(**rc) for rc in raw_chunks]
+        _CHUNKS_CACHE[chunk_key] = chunks
     else:
         chunks = chunk_library(
             extracted_pages_path,
@@ -282,6 +368,7 @@ def get_retriever(
             chunk_overlap_tokens=overlap,
             output_path=chunks_path,
         )
+        _CHUNKS_CACHE[chunk_key] = chunks
 
     if mode == "bm25":
         retriever = BM25Retriever(chunks)
@@ -296,6 +383,7 @@ def get_retriever(
     else:
         raise ValueError(f"Unknown retriever mode: {mode}. Choose bm25, embedding, or hybrid.")
 
+    _RETRIEVER_INSTANCE_CACHE[cache_key] = (retriever, chunks)
     return retriever, chunks
 
 

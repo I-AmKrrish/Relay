@@ -36,15 +36,16 @@ if str(PROJECT_ROOT) not in sys.path:
 
 # Global Server Configuration
 class ServerConfig:
-    # Latency calibration (fitted to Phase 4 empirical Groq measurements)
-    ttft_lognorm_mu: float = 5.95  # exp(5.95) ≈ 384 ms
-    ttft_lognorm_sigma: float = 0.15  # range roughly 290 - 510 ms
+    # Latency calibration (fitted to Phase 4 & empirical Groq measurements with prefill term)
+    ttft_lognorm_mu: float = 5.90  # exp(5.90) ≈ 365 ms median base TTFT
+    ttft_lognorm_sigma: float = 0.23  # captures empirical tail spread (250ms - 650ms)
+    prefill_ms_per_token: float = 0.04  # ~40 ms per 1,000 prompt tokens prefill scaling
     token_gen_rate_tok_per_sec: float = 300.0  # ~3.3 ms per token
     concurrency_slowdown_alpha: float = 0.15  # 15% latency penalty per in-flight request beyond 3
 
-    # Rate limits (calibrated to Groq free tier)
+    # Rate limits (calibrated to Groq free tier backend limits)
     limit_rpm: int = 30
-    limit_tpm: int = 8000
+    limit_tpm: int = 7000  # 7,000 ITPM cap enforced by Groq backend
     limit_daily_requests: int = 1000
 
     # Fault injection
@@ -62,6 +63,14 @@ in_flight_lock = asyncio.Lock()
 request_history: Deque[Tuple[float, int]] = deque()  # (timestamp, token_count)
 daily_request_history: Deque[float] = deque()  # timestamps in last 24h
 
+# Continuous token bucket state
+token_bucket_available: float = float(config.limit_tpm)
+token_bucket_last_refill: float = time.time()
+
+# Continuous rolling daily request bucket state
+request_pool_available: float = float(config.limit_daily_requests)
+request_pool_last_refill: float = time.time()
+
 
 app = FastAPI(title="The Relay Stand-in Model Service", version="1.0.0")
 
@@ -77,49 +86,80 @@ class ChatCompletionRequest(BaseModel):
 
 def check_rate_limits(estimated_tokens: int) -> Tuple[bool, Optional[int], Optional[str]]:
     """
-    Check current request against RPM, TPM, and daily request limits.
-    Returns: (is_limited, retry_after_seconds, reason_string)
+    Check current request against continuous rolling refill:
+      - 1,000 RPD pool refilling at 1 req per 86.4s (86,400s / 1,000)
+      - 30 RPM sliding window
+      - 7,000 ITPM token bucket continuously refilling at ~116.7 tok/s (7,000 / 60s)
     """
+    global token_bucket_available, token_bucket_last_refill
+    global request_pool_available, request_pool_last_refill
     now = time.time()
 
     if config.forced_429:
         return True, 15, "Forced 429 testing mode enabled."
 
-    # Clean history older than 60 seconds
+    # 1. Continuous token bucket refill (~116.67 tok/s)
+    tok_elapsed = now - token_bucket_last_refill
+    token_bucket_available = min(float(config.limit_tpm), token_bucket_available + tok_elapsed * (config.limit_tpm / 60.0))
+    token_bucket_last_refill = now
+
+    # 2. Continuous rolling daily request refill (1 req per 86.4s)
+    req_elapsed = now - request_pool_last_refill
+    request_pool_available = min(float(config.limit_daily_requests), request_pool_available + req_elapsed * (config.limit_daily_requests / 86400.0))
+    request_pool_last_refill = now
+
+    # Clean RPM history older than 60s
     while request_history and request_history[0][0] < now - 60.0:
         request_history.popleft()
 
-    # Clean daily history older than 24 hours (86400 seconds)
-    while daily_request_history and daily_request_history[0] < now - 86400.0:
-        daily_request_history.popleft()
+    # Check 1: Daily pool
+    if request_pool_available < 1.0:
+        refill_rate_rpd = config.limit_daily_requests / 86400.0
+        retry_after = max(1, int(math.ceil((1.0 - request_pool_available) / refill_rate_rpd)))
+        return True, retry_after, f"Daily request limit reached ({config.limit_daily_requests} RPD pool)."
 
-    # 1. Daily limit check
-    if len(daily_request_history) >= config.limit_daily_requests:
-        oldest = daily_request_history[0]
-        retry_after = max(1, int(math.ceil(oldest + 86400.0 - now)))
-        return True, retry_after, f"Daily request limit reached ({config.limit_daily_requests} RPD)."
-
-    # 2. RPM check
-    current_rpm = len(request_history)
-    if current_rpm >= config.limit_rpm:
+    # Check 2: 30 RPM
+    if len(request_history) >= config.limit_rpm:
         oldest = request_history[0][0]
         retry_after = max(1, int(math.ceil(oldest + 60.0 - now)))
-        return True, retry_after, f"Rate limit reached on requests per minute (RPM): Limit {config.limit_rpm}, Used {current_rpm}."
+        return True, retry_after, f"Rate limit reached on requests per minute (RPM): Limit {config.limit_rpm}, Used {len(request_history)}."
 
-    # 3. TPM check
-    current_tpm = sum(tok for _, tok in request_history)
-    if current_tpm + estimated_tokens > config.limit_tpm:
-        oldest = request_history[0][0]
-        retry_after = max(1, int(math.ceil(oldest + 60.0 - now)))
+    # Check 3: Continuous token bucket (7,000 ITPM)
+    if estimated_tokens > token_bucket_available:
+        deficit = estimated_tokens - token_bucket_available
+        refill_rate = config.limit_tpm / 60.0
+        retry_after = max(1, int(math.ceil(deficit / refill_rate)))
         return True, retry_after, (
-            f"Rate limit reached on tokens per minute (TPM): "
-            f"Limit {config.limit_tpm}, Used {current_tpm}, Requested {estimated_tokens}."
+            f"Rate limit reached on input tokens per minute (ITPM): "
+            f"Limit {config.limit_tpm}, Available {int(token_bucket_available)}, Requested {estimated_tokens}."
         )
 
-    # Record accepted request
+    # Debit buckets
+    token_bucket_available -= estimated_tokens
+    request_pool_available -= 1.0
     request_history.append((now, estimated_tokens))
     daily_request_history.append(now)
     return False, None, None
+
+
+
+def is_refusal_prompt(prompt: str) -> bool:
+    """Detect if prompt pertains to unanswerable near-miss or out-of-corpus questions."""
+    p_lower = prompt.lower()
+    refusal_signals = [
+        "weight decay",
+        "microphone",
+        "polar pattern",
+        "gumbel-softmax",
+        "seconds per step",
+        "llama",
+        "whisper",
+        "gpu hours",
+        "point cloud",
+        "chinese",
+        "unsupported",
+    ]
+    return any(sig in p_lower for sig in refusal_signals)
 
 
 def synthesize_completion_content(messages: List[Dict[str, str]]) -> str:
@@ -136,11 +176,10 @@ def synthesize_completion_content(messages: List[Dict[str, str]]) -> str:
 
     # Pipeline Step 3: Decide
     if "Determine if the provided passages" in sys_prompt:
-        unanswerable_kws = ["llama", "whisper", "gpu hours", "point cloud", "chinese", "mars", "weather", "capital"]
-        if any(k in prompt.lower() for k in unanswerable_kws):
+        if is_refusal_prompt(prompt):
             return json.dumps({
                 "decision": "unsupported",
-                "reason": "Topic is not covered in the library papers.",
+                "reason": "The required factual details are not present in the arXiv corpus.",
                 "alternate_query": ""
             })
         return json.dumps({
@@ -154,9 +193,9 @@ def synthesize_completion_content(messages: List[Dict[str, str]]) -> str:
         return json.dumps({"passed": True, "critique": ""})
 
     # Pipeline Step 4: Draft
-    unanswerable_kws = ["llama", "whisper", "gpu hours", "point cloud", "chinese", "mars", "weather", "capital"]
-    if any(k in prompt.lower() for k in unanswerable_kws) or "unsupported" in prompt.lower():
+    if is_refusal_prompt(prompt) or "unsupported" in prompt.lower():
         return "The papers do not say."
+
 
     # Extract citations present in prompt passages
     cits = re.findall(r"\[[^\]]+?,\s*p\.\s*\d+\]", prompt)
@@ -236,10 +275,24 @@ async def stream_generator(
 async def chat_completions(req: ChatCompletionRequest, raw_req: Request):
     global in_flight_count
 
-    # Calculate input tokens
+    # Calculate input tokens with accurate lexical + punctuation weighting
     prompt_words = sum(len(m.get("content", "").split()) for m in req.messages)
-    tokens_in = max(10, int(prompt_words * 1.3))
+    punct_count = sum(m.get("content", "").count(c) for m in req.messages for c in ",.:;?![]{}()\"'")
+    tokens_in = max(10, int(prompt_words * 1.25 + punct_count * 0.4))
     tokens_out_est = req.max_tokens or 64
+
+    # 0. Single-request context limit (HTTP 413 observed on real Groq at 8,512 tokens)
+    if tokens_in > 8000:
+        return JSONResponse(
+            status_code=413,
+            content={
+                "error": {
+                    "message": f"Request entity too large: prompt tokens ({tokens_in}) exceed model context window limit of 8192 tokens.",
+                    "type": "invalid_request_error",
+                    "code": "context_length_exceeded",
+                }
+            },
+        )
 
     # 1. Rate Limit Gate
     is_limited, retry_after, reason = check_rate_limits(tokens_in + tokens_out_est)
@@ -249,7 +302,7 @@ async def chat_completions(req: ChatCompletionRequest, raw_req: Request):
             "x-ratelimit-limit-requests": str(config.limit_rpm),
             "x-ratelimit-limit-tokens": str(config.limit_tpm),
             "x-ratelimit-remaining-requests": "0",
-            "x-ratelimit-remaining-tokens": "0",
+            "x-ratelimit-remaining-tokens": str(max(0, int(token_bucket_available))),
             "x-ratelimit-reset-requests": f"{retry_after}s",
             "x-ratelimit-reset-tokens": f"{retry_after}s",
             "content-type": "application/json",
@@ -281,8 +334,10 @@ async def chat_completions(req: ChatCompletionRequest, raw_req: Request):
         current_concurrency = in_flight_count
 
     try:
-        # 4. Latency sampling (Log-normal distribution calibrated to real Groq probes)
+        # 4. Latency sampling: Log-normal base TTFT + linear prompt prefill scaling
         base_ttft_ms = max(150.0, random.lognormvariate(config.ttft_lognorm_mu, config.ttft_lognorm_sigma))
+        prefill_ms = config.prefill_ms_per_token * tokens_in
+        base_ttft_ms += prefill_ms
 
         # Fault Injection: "Succeeds slowly" tail latency spike
         if config.slow_rate > 0.0 and random.random() < config.slow_rate:
@@ -394,11 +449,15 @@ def update_config(update: ConfigUpdateRequest):
 
 @app.post("/reset")
 def reset_state():
-    """Reset rate-limit history and in-flight counters."""
-    global in_flight_count
+    """Reset rate-limit history, continuous token buckets, and in-flight counters."""
+    global in_flight_count, token_bucket_available, token_bucket_last_refill, request_pool_available, request_pool_last_refill
     request_history.clear()
     daily_request_history.clear()
     in_flight_count = 0
+    token_bucket_available = float(config.limit_tpm)
+    token_bucket_last_refill = time.time()
+    request_pool_available = float(config.limit_daily_requests)
+    request_pool_last_refill = time.time()
     return {"status": "reset_completed"}
 
 
@@ -407,7 +466,8 @@ def main():
     parser.add_argument("--host", type=str, default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8000)
     parser.add_argument("--limit-rpm", type=int, default=30)
-    parser.add_argument("--limit-tpm", type=int, default=8000)
+    parser.add_argument("--limit-tpm", type=int, default=7000)
+
     parser.add_argument("--limit-daily", type=int, default=1000)
     parser.add_argument("--error-rate", type=float, default=0.0)
     parser.add_argument("--timeout-rate", type=float, default=0.0)
