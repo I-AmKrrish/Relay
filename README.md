@@ -145,3 +145,4 @@ This reads `results.csv` and outputs Tables 1, 2a, 2b, and 3 into `analysis/TABL
    - Resilient retries capped calls at 20 (**60.0% traffic reduction**), preventing cascading collapse.
 5. **Where the Time Goes**:
    - Decomposing slow request `res_878348` revealed that **76.7% of total latency occurred AFTER the first token was emitted**. In multi-step RAG, standard TTFT only measures Step 1; the bulk of wait time is spent in subsequent multi-step completions.
+

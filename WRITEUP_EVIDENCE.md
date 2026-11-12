@@ -57,7 +57,7 @@ This dossier organizes all empirical measurements, code references, design choic
 
 ## 3. Results (Tables 1, 2a, 2b, 3)
 
-All numbers below are generated directly from [`results.csv`](file:///c:/Users/rabbu/OneDrive/Desktop/Projects/Relay/results.csv) (300 rows) by [`analysis/tables.py`](file:///c:/Users/rabbu/OneDrive/Desktop/Projects/Relay/analysis/tables.py):
+All numbers below are generated directly from [`results.csv`](file:///c:/Users/rabbu/OneDrive/Desktop/Projects/Relay/results.csv) (144 unique rows, 100% compliant with Hard Rule #5) by [`analysis/tables.py`](file:///c:/Users/rabbu/OneDrive/Desktop/Projects/Relay/analysis/tables.py):
 
 ### Table 1: Real Model Service & Rate Limit Parameters
 | Parameter | Value | Confidence | How Found / Observed |
@@ -74,19 +74,19 @@ All numbers below are generated directly from [`results.csv`](file:///c:/Users/r
 ### Table 2a: Latency Distribution Across Traffic Scenarios
 | Scenario | Offered Rate | Duration (s) | TTFT p50 (ms) | TTFT p95 (ms) | TTFT p99 (ms) | Total p50 (ms) | Total p95 (ms) | Total p99 (ms) |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **`steady`** | 3.0 req/m | 302.3s | 909.6 | 1610.5 | 1784.4 | 7839.3 | 8101.5 | 8139.5 |
-| **`burst`** | 92.9 req/m | 16.8s | 3507.5 | 3507.5 | 3507.5 | 10238.7 | 18759.0 | 19831.9 |
+| **`steady`** | 2.6 req/m | 302.3s | 909.6 | 1683.0 | 1798.9 | 7840.8 | 8108.3 | 8140.9 |
+| **`burst`** | 89.4 req/m | 16.8s | 3507.5 | 3507.5 | 3507.5 | 10419.9 | 18805.9 | 19843.1 |
 | **`sustained_overload`** | 32.9 req/m | 36.5s | 0.0 | 0.0 | 0.0 | 9316.8 | 10514.4 | 10985.2 |
-| **`limit_halved`** | 34.2 req/m | 19.3s | 4290.3 | 4290.3 | 4290.3 | 9302.3 | 10628.2 | 10684.4 |
+| **`limit_halved`** | 31.1 req/m | 19.3s | 4290.3 | 4290.3 | 4290.3 | 9335.5 | 10635.2 | 10685.8 |
 | **`daily_exhausted`** | 30000.0 req/m | 0.0s | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 |
 
 ### Table 2b: Reliability, Queue & Cost Metrics Across Traffic Scenarios
 | Scenario | Success % | Rate Limited % | Timeout/Drop % | Retries / Req | Peak Queue | Tokens / Ans | Cost / 1k Ans (Commercial) |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **`steady`** | 46.7% | 0.0% | 53.3% | 0.33 | 1 | 1708.4 | $0.0865 |
-| **`burst`** | 7.7% | 0.0% | 92.3% (5 shed) | 0.00 | 20 | 1042.0 | $0.0529 |
+| **`steady`** | 38.5% | 0.0% | 61.5% | 0.38 | 1 | 1998.4 | $0.1011 |
+| **`burst`** | 4.0% | 0.0% | 96.0% (5 shed) | 0.00 | 20 | 1042.0 | $0.0529 |
 | **`sustained_overload`** | 0.0% | 0.0% | 100.0% | 0.00 | 20 | 5.4 | $0.0003 |
-| **`limit_halved`** | 18.2% | 0.0% | 81.8% | 0.00 | 4 | 921.0 | $0.0468 |
+| **`limit_halved`** | 10.0% | 0.0% | 90.0% | 0.00 | 4 | 921.0 | $0.0468 |
 | **`daily_exhausted`** | 0.0% | 100.0% | 0.0% | 0.00 | 0 | 0.0 | $0.0000 |
 
 *Note*: Free tier actual cost is **$0.00**. Commercial costs calculated at Groq list price ($0.05/1M input, $0.08/1M output).

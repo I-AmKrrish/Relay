@@ -316,7 +316,7 @@ class ResilientPipelineRunner:
                 tokens_in=0,
                 tokens_out=0,
                 retrieval_setting="shed",
-                answer_grade="not_graded",
+                answer_grade="wrong",
                 citations=[],
             )
             log_result_to_csv(res)
@@ -378,7 +378,7 @@ class ResilientPipelineRunner:
                 tokens_in=0,
                 tokens_out=0,
                 retrieval_setting="shed",
-                answer_grade="not_graded",
+                answer_grade="wrong",
                 citations=[],
             )
             log_result_to_csv(res)
@@ -437,7 +437,7 @@ class ResilientPipelineRunner:
                     tokens_in=0,
                     tokens_out=0,
                     retrieval_setting=f"timeout_deadline_{self.resilience.config.request_deadline_seconds}s",
-                    answer_grade="not_graded",
+                    answer_grade="wrong",
                     citations=[],
                 )
                 log_result_to_csv(timeout_res)

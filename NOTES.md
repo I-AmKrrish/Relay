@@ -316,7 +316,7 @@ This log records decisions, exact empirical measurements, unexpected findings, a
 
 ### Artifacts Built
 - Created `analysis/tables.py` and generated markdown artifact `analysis/TABLES.md`.
-- Read from `results.csv` (300 validated execution rows) to synthesize Tables 1, 2a, 2b, and 3.
+- Read from `results.csv` (144 validated execution rows, 100% compliant with Hard Rule #5) to synthesize Tables 1, 2a, 2b, and 3.
 
 ### Table 1: Model Service & Rate Limit Parameters (`qwen/qwen3.8-27b`)
 - **RPM**: 30 req/min (High confidence, observed in `x-ratelimit-limit-requests`)
@@ -331,10 +331,10 @@ This log records decisions, exact empirical measurements, unexpected findings, a
 
 | Scenario | Offered Rate | Duration | TTFT p50 | Total p50 | Success % | Rate Limited % | Timeout/Drop % | Peak Queue | Tokens/Ans | Cost/1k Ans |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **`steady`** | 3.0 req/m | 302.3s | 909.6 ms | 7,839.3 ms | 46.7% | 0.0% | 53.3% | 1 | 1,708.4 | $0.0865 |
-| **`burst`** | 92.9 req/m | 16.8s | 3,507.5 ms | 10,238.7 ms | 7.7% | 0.0% | 92.3% | 20 | 1,042.0 | $0.0529 |
+| **`steady`** | 2.6 req/m | 302.3s | 909.6 ms | 7,840.8 ms | 38.5% | 0.0% | 61.5% | 1 | 1,998.4 | $0.1011 |
+| **`burst`** | 89.4 req/m | 16.8s | 3,507.5 ms | 10,419.9 ms | 4.0% | 0.0% | 96.0% (5 shed) | 20 | 1,042.0 | $0.0529 |
 | **`sustained_overload`** | 32.9 req/m | 36.5s | 0.0 ms | 9,316.8 ms | 0.0% | 0.0% | 100.0% | 20 | 5.4 | $0.0003 |
-| **`limit_halved`** | 34.2 req/m | 19.3s | 4,290.3 ms | 9,302.3 ms | 18.2% | 0.0% | 81.8% | 4 | 921.0 | $0.0468 |
+| **`limit_halved`** | 31.1 req/m | 19.3s | 4,290.3 ms | 9,335.5 ms | 10.0% | 0.0% | 90.0% | 4 | 921.0 | $0.0468 |
 | **`daily_exhausted`** | 30,000 req/m | 0.0s | 0.0 ms | 0.0 ms | 0.0% | 100.0% | 0.0% | 0 | 0.0 | $0.0000 |
 
 ### Table 3: Retrieval Quality vs Cost Comparison
