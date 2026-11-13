@@ -82,7 +82,7 @@ All numbers below are generated directly from [`results.csv`](file:///c:/Users/r
 
 | Scenario | Offered Rate | Duration (s) | TTFT p50 (ms) | TTFT p95 (ms) | TTFT p99 (ms) | Total p50 (ms) | Total p95 (ms) | Total p99 (ms) |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **`steady`** | 2.5 req/m | 121.5s | 700.8 | 766.2 | 767.1 | 1485.4 | 2871.3 | 2895.4 |
+| **`steady`** | 2.8 req/m | 325.9s | 1331.4 | 1575.9 | 1606.6 | 3062.1 | 5941.0 | 6457.4 |
 | **`burst`** | 72.0 req/m | 20.8s | 1212.4 | 1212.4 | 1212.4 | 8100.0 | 8345.9 | 8466.6 |
 | **`sustained_overload`** | 39.9 req/m | 30.1s | 0.0 | 0.0 | 0.0 | 8100.0 | 8374.8 | 8415.5 |
 | **`limit_halved`** | 22.2 req/m | 27.1s | 2529.8 | 3866.7 | 3985.5 | 8100.0 | 8305.4 | 8439.9 |
@@ -94,7 +94,7 @@ All numbers below are generated directly from [`results.csv`](file:///c:/Users/r
 
 | Scenario | Success % | Rate Limited % | Timeout/Drop % | Retries / Req | Peak Queue | Tokens / Ans | Cost / 1k Ans (Commercial) |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **`steady`** | 100.0% | 0.0% | 0.0% | 0.00 | 1 | 1728.6 | $0.0874 |
+| **`steady`** | 100.0% | 0.0% | 0.0% | 0.00 | 1 | 1806.9 | $0.0915 |
 | **`burst`** | 4.0% | 0.0% | 96.0% | 0.00 | 20 | 1082.0 | $0.0549 |
 | **`sustained_overload`** | 0.0% | 0.0% | 100.0% | 0.00 | 20 | 11.0 | $0.0006 |
 | **`limit_halved`** | 30.0% | 0.0% | 70.0% | 0.10 | 4 | 1104.3 | $0.0561 |
@@ -216,8 +216,11 @@ The system delivers 4 distinct, transparent user experiences:
    In single-turn generation, latency is just network time plus token emission. In verified RAG, latency compounds across 4–5 sequential reasoning steps. A modest 300 ms slowdown per step accumulates into a 1.5 s increase per turn, turning queuing contention into instant deadline timeouts.
 2. **Token Limits Govern Throughput, Not RPM**:
    Free-tier LLM rate limits cannot be modeled by request counts alone. Systems must track cumulative token consumption and scale retrieval context down to maintain operational throughput.
-3. **Event-Loop Health in Async LLM Systems**:
-   Synchronous CPU-bound retrieval (BM25 tokenization, embedding generation) must never execute directly on the asyncio event loop. Offloading retrieval to `asyncio.to_thread` with preloaded singleton models restored steady-load success from a broken 46.7% to a flawless **100.0%**.
+3. **A/B Isolation of Steady Workload & Event-Loop Health**:
+   We ran a controlled A/B test ([`data/ab_steady_isolation_summary.json`](file:///c:/Users/rabbu/OneDrive/Desktop/Projects/Relay/data/ab_steady_isolation_summary.json)) holding offered rate ($2.6\text{ req/min}$, 23.08s interval) and request count ($N=15$) constant:
+   - *Pre-fix Architecture (Synchronous CPU retrieval on event loop + lazy model loading)*: Experienced a **5,791.2 ms maximum event loop lag** during cold-start model initialization and synchronous retrieval passes. This pushed p95 total latency to **7,842.1 ms** (on the brink of the 8.0s deadline) and produced an initial timeout (93.3% success).
+   - *Post-fix Architecture (`asyncio.to_thread` + preloaded singleton models)*: Reduced maximum event loop lag by **81.3%** down to **1,084.1 ms**, cut p95 total latency from 7,842 ms down to **5,941.0 ms**, and achieved **100.0% success** across all 15 requests.
+   - *Root Cause of Original 53% Failure*: Auditing the git history of the original steady run (`commit 795370c`) revealed that requests were arriving with an 8.0s/clustered interval ($\sim 9.7\text{ req/min}$), generating $\sim 25,000\text{ tokens/min}$ against the 7,000 ITPM cap. The original collapse was therefore **both token bucket exhaustion under rapid arrivals AND event-loop blocking during cold-start/retrieval**. Isolating the rate at 2.6 req/min removed token exhaustion, allowing us to isolate and prove the 1,900 ms p95 latency reduction delivered by the async fix.
 
 ---
 

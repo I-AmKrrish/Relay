@@ -1,0 +1,51 @@
+{
+  "sync_condition": {
+    "condition": "Condition 1 (Sync Pre-Fix)",
+    "sync_mode": true,
+    "n": 15,
+    "wall_duration_s": 325.6153142999974,
+    "offered_rate_rpm": 2.7639977620057756,
+    "success_pct": 93.33333333333333,
+    "rate_limited_pct": 0.0,
+    "timeout_pct": 6.666666666666667,
+    "error_pct": 0.0,
+    "total_p50_ms": 3354.594000003999,
+    "total_p95_ms": 7842.095760002849,
+    "total_p99_ms": 7964.820992006571,
+    "ttft_p50_ms": 1186.257850000402,
+    "ttft_p95_ms": 1656.9995300029402,
+    "ttft_p99_ms": 1908.8978259987193,
+    "mean_tokens_in": 1595.6,
+    "mean_tokens_out": 33.6,
+    "loop_lag": {
+      "mean_lag_ms": 7.8899182889160135,
+      "max_lag_ms": 5791.175999979023,
+      "p99_lag_ms": 26.188767990679438
+    }
+  },
+  "async_condition": {
+    "condition": "Condition 2 (Async Post-Fix)",
+    "sync_mode": false,
+    "n": 15,
+    "wall_duration_s": 325.93608260000474,
+    "offered_rate_rpm": 2.7612775879880043,
+    "success_pct": 100.0,
+    "rate_limited_pct": 0.0,
+    "timeout_pct": 0.0,
+    "error_pct": 0.0,
+    "total_p50_ms": 3062.0682000007946,
+    "total_p95_ms": 5940.972669993061,
+    "total_p99_ms": 6457.4029339966355,
+    "ttft_p50_ms": 1331.3922999950591,
+    "ttft_p95_ms": 1575.9825499902945,
+    "ttft_p99_ms": 1606.6685899987351,
+    "mean_tokens_in": 1770.1333333333334,
+    "mean_tokens_out": 36.8,
+    "loop_lag": {
+      "mean_lag_ms": 7.824624835523252,
+      "max_lag_ms": 1084.0580000169575,
+      "p99_lag_ms": 22.71850199787871
+    }
+  },
+  "timestamp": "2026-11-13T15:35:34.061196+00:00"
+}

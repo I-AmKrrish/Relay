@@ -20,3 +20,4 @@ for s in slowest:
     s5 = s["step_5_verify_ms"]
     retries = s["retries"]
     print(f"{req_id} | scenario: {scenario} | source: {source} | total: {total:.1f}ms | q_wait: {q_wait:.1f}ms | s1: {s1:.1f}ms | s2: {s2:.1f}ms | s3: {s3:.1f}ms | s4: {s4:.1f}ms | s5: {s5:.1f}ms | retries: {retries}")
+

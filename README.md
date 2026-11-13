@@ -143,7 +143,7 @@ This reads `results.csv` and ensures 100% mathematical consistency across all ta
    - At ~2,500 input tokens per verified RAG answer and a 7,000 ITPM cap, maximum sustainable throughput is strictly $\approx 2.8$ answers/minute.
    - At 3.0+ APM, requests inevitably trigger 429 backoff and 8.0s deadline timeouts.
 3. **Table 2a & 2b (Traffic Scenarios)**:
-   - `steady`: **100.0% success**, p50 total latency 1,485.4 ms (preloading models and `asyncio.to_thread` eliminated event-loop blocking).
+   - `steady`: **100.0% success** (15/15 ok), p50 total latency 3,062.1 ms, p95 5,941.0 ms across 15 requests at 2.8 req/m (isolated A/B test proved async threading and model preloading cut event-loop max lag from 5,791 ms down to 1,084 ms).
    - `burst`: 25 concurrent requests hit the queue; 96.0% experienced clean timeouts at the 8.0s deadline boundary.
    - `sustained_overload`: 20 requests safely bounded by 8.0s deadline timeouts.
    - `daily_exhausted`: Requests rejected in 0ms consuming 0 tokens.
