@@ -1,0 +1,41 @@
+{
+  "scenario": "real_groq_3.0_apm_check",
+  "requests_sent": 4,
+  "successful_ok": 4,
+  "success_rate_pct": 100.0,
+  "duration_seconds": 61.1,
+  "total_tokens_in": 12231,
+  "tokens_per_minute": 12004.4,
+  "requests": [
+    {
+      "request_id": "res_423272",
+      "status": "ok",
+      "total_ms": 2812.9,
+      "tokens_in": 2888,
+      "retries": 0
+    },
+    {
+      "request_id": "res_443278",
+      "status": "ok",
+      "total_ms": 2288.3,
+      "tokens_in": 4214,
+      "retries": 0
+    },
+    {
+      "request_id": "res_463285",
+      "status": "ok",
+      "total_ms": 2318.3,
+      "tokens_in": 4083,
+      "retries": 0
+    },
+    {
+      "request_id": "res_483296",
+      "status": "ok",
+      "total_ms": 1106.7,
+      "tokens_in": 1046,
+      "retries": 0
+    }
+  ],
+  "final_remaining_tokens": "2690",
+  "timestamp": "2026-11-13T15:58:04.395697+00:00"
+}

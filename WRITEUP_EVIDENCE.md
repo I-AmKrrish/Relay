@@ -150,9 +150,15 @@ All numbers below are generated directly from [`results.csv`](file:///c:/Users/r
 ### The Headline Insight: The Number They Missed
 - Groq advertises a **30 RPM** rate limit, prompting engineers to assume the system can sustain ~30 requests/minute.
 - However, each verified answer requires 4–5 sequential LLM passes consuming $\approx 2,400\text{--}2,650$ input tokens.
-- Under Groq's enforced **7,000 ITPM limit**, sustainable throughput is strictly:
+- Under Groq's enforced **7,000 ITPM limit**, sustainable continuous throughput is strictly:
   $$\text{Capacity} = \frac{7,000\text{ ITPM}}{2,500\text{ tokens/answer}} \approx 2.8\text{ answers/minute}$$
-- In our capacity curve experiment ([`loadgen/run_capacity_curve.py`](file:///c:/Users/rabbu/OneDrive/Desktop/Projects/Relay/loadgen/run_capacity_curve.py)), offering 1.0 and 2.0 APM achieved **100% success** (p50 total 2,367.6 ms and 2,900.5 ms). But at **3.0 APM**, the 7,000 ITPM bucket saturated, triggering 429 backoff and pushing 100% of requests past the 8.0s deadline.
+- In our expanded capacity curve sweep ([`data/capacity_curve_summary.json`](file:///c:/Users/rabbu/OneDrive/Desktop/Projects/Relay/data/capacity_curve_summary.json)):
+  - At **1.0 to 2.5 APM**, token inflow rises from 2,354.7 to 5,489.8 tok/min, with 100% success and p50 latency under 2.3s.
+  - At **3.0 APM** ($N=10$, 20s interval), token inflow reaches **6,473.1 tok/min** (**92.5%** of the 7,000 ITPM cap).
+  - At **4.0 APM** (15s interval), token inflow reaches **8,347.7 tok/min** (exceeding the 7,000 cap). The system hits rate-limit backoff, pushing p95 latency from 2.99s to **5.83s** (`token_limit_bound: true`).
+  - At **6.0 APM** (10s interval), offered load (9,151.4 tok/min) overwhelms the bucket: success drops to **75.0%**, effective throughput plateaus at **4.60 APM**, and requests encounter 429 backoff and 8.0s deadline timeouts.
+- **Real Groq 3.0 APM Validation** ([`data/capacity_real_groq_check.json`](file:///c:/Users/rabbu/OneDrive/Desktop/Projects/Relay/data/capacity_real_groq_check.json)):
+  To verify this limit on the live service, we dispatched 4 consecutive questions at 3.0 APM (20s interval). By request 3, `x-ratelimit-remaining-tokens` plummeted from full down to **1,283 tokens**. At 20s intervals, Groq only refills $\sim 2,334$ tokens while complex multi-step queries consume $\sim 4,000$ tokens, creating an unsustainable net deficit of $\sim 1,700$ tokens per turn.
 - **Token capacity, not request count, is the binding operational constraint.** This elevates retrieval chunk size from an internal tuning knob into an external system capacity lever.
 
 ### How This Library Misleads a Naive Retriever (3 Real Failure Modes)

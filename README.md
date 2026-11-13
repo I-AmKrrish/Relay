@@ -141,7 +141,8 @@ This reads `results.csv` and ensures 100% mathematical consistency across all ta
 2. **The Headline Insight ("The Number They Missed")**:
    - The binding constraint is **tokens**, not requests.
    - At ~2,500 input tokens per verified RAG answer and a 7,000 ITPM cap, maximum sustainable throughput is strictly $\approx 2.8$ answers/minute.
-   - At 3.0+ APM, requests inevitably trigger 429 backoff and 8.0s deadline timeouts.
+   - Stand-In Capacity Sweep ([`data/capacity_curve_summary.json`](file:///c:/Users/rabbu/OneDrive/Desktop/Projects/Relay/data/capacity_curve_summary.json)): 100% success up to 3.0 APM (6,473 tok/min, 92.5% cap); token limit binds at 4.0 APM (8,348 tok/min, p95 latency jumps to 5.8s); throughput plateaus at 4.6 APM under 6.0 APM offered load.
+   - Real Groq 3.0 APM Check ([`data/capacity_real_groq_check.json`](file:///c:/Users/rabbu/OneDrive/Desktop/Projects/Relay/data/capacity_real_groq_check.json)): 4 consecutive requests spaced 20s apart bled remaining tokens down to 1,283 by request 3, empirically proving the continuous deficit.
 3. **Table 2a & 2b (Traffic Scenarios)**:
    - `steady`: **100.0% success** (15/15 ok), p50 total latency 3,062.1 ms, p95 5,941.0 ms across 15 requests at 2.8 req/m (isolated A/B test proved async threading and model preloading cut event-loop max lag from 5,791 ms down to 1,084 ms).
    - `burst`: 25 concurrent requests hit the queue; 96.0% experienced clean timeouts at the 8.0s deadline boundary.
