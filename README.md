@@ -72,7 +72,7 @@ relay/
     verify_tables.py    # Rule 4 automated verification gate & consistency checker
     TABLES.md           # Formatted markdown tables & empirical findings
   raw/                  # Raw probe logs, refill curves, and sidecar timing_breakdown.jsonl
-  results.csv           # 137 validated execution rows (exact 12-column schema)
+  results.csv           # 212 validated execution rows (exact 12-column schema)
   NOTES.md              # Detailed running engineering log across all phases
   WRITEUP_EVIDENCE.md   # Definitive section-by-section evidence dossier for final defense
   requirements.txt      # Python dependencies
@@ -137,7 +137,7 @@ This reads `results.csv` and ensures 100% mathematical consistency across all ta
 
 ## 📊 Summary of Empirical Findings
 
-1. **Table 1 (Service Parameters)**: Groq free-tier enforces a rolling pool of **1,000 RPD** (refilling 1 request every 86.4s) and an enforced cap of **7,000 ITPM** (refilling continuously at ~116.7 tok/s). Prompts $>8,000$ tokens return HTTP 413 Payload Too Large.
+1. **Table 1 (Service Parameters & Live TPD Discovery)**: Groq free-tier enforces a rolling pool of **1,000 RPD** (refilling 1 request every 86.4s) and an enforced cap of **7,000 ITPM** (refilling continuously at ~116.7 tok/s). While official docs cite 500,000 Tokens/Day (TPD), live API traffic returned HTTP 429 at token 199,399 with an explicit body revealing the true quota is **200,000 TPD**. Prompts $>8,000$ tokens return HTTP 413 Payload Too Large.
 2. **The Headline Insight ("The Number They Missed")**:
    - The binding constraint is **tokens**, not requests.
    - At ~2,500 input tokens per verified RAG answer and a 7,000 ITPM cap, maximum sustainable throughput is strictly $\approx 2.8$ answers/minute.
@@ -148,9 +148,11 @@ This reads `results.csv` and ensures 100% mathematical consistency across all ta
    - `burst`: 25 concurrent requests hit the queue; 96.0% experienced clean timeouts at the 8.0s deadline boundary.
    - `sustained_overload`: 20 requests safely bounded by 8.0s deadline timeouts.
    - `daily_exhausted`: Requests rejected in 0ms consuming 0 tokens.
-4. **Table 3 (Retrieval Trade-Offs on Real Groq)**:
-   - **Setting A (256-tok BM25)**: Completed 13/16 questions with **53.8% quality** and 2,657.4 tokens/answer.
-   - **Setting B (256-tok Dense BGE)**: Completed 8/16 questions with **62.5% quality** and 2,421.2 tokens/answer. Dense retrieval improved semantic matching on multi-concept queries but exerted higher rate-limit pressure under continuous load.
+4. **Table 3 (Retrieval Trade-Offs on Real Groq across 3 Controlled Settings)**:
+   - **Setting A (`bm25_k3_c256`)**: Completed 16/16 with **56.2% quality** (9/16: 4 factual + 5 refusals) and 2,944.2 tokens/answer.
+   - **Setting B (`dense_k3_c256`)**: Completed 16/16 with **68.8% quality** (11/16: 6 factual + 5 refusals) and 3,139.1 tokens/answer (**+12.6% quality lift** over BM25). Dense embeddings resolved multi-concept queries (`q01` and `q10`) that BM25 missed due to keyword dispersion.
+   - **Setting C (`dense_k3_c512`)**: Completed 15/16 with **66.7% quality** (10/15: 5 factual + 5 refusals) and 4,016.8 tokens/answer (**+36.4% token overhead**). Demonstrates **chunk dilution**: larger chunks added surrounding narrative that degraded technical precision and accelerated token bucket depletion.
+   - All 47 rows completed with `status == 'ok'` with zero status/grade contradictions.
 5. **Where the Time Goes (Real Request `eval_bm25_k3_c256_q02`)**:
-   - Total latency was 5,558.5 ms. Over **83.1% of latency occurred AFTER the first internal token** because of subsequent sequential passes (decide, draft, verify).
-   - Output is held until verification passes to prevent streaming ungrounded hallucinations, making user-visible TTFT $\approx 5,558.5\text{ ms}$.
+   - Total latency was 4,794.0 ms, with 100% of time spent in working execution across 5 discrete pipeline stages (Step 1 928ms, Step 2 2.7ms, Step 3 947ms, Step 4 1,405ms, Step 5 1,511ms).
+   - Over **73.7% of latency occurred AFTER the first internal token** because of subsequent sequential passes (decide, draft, verify). Output is held until verification passes to prevent streaming ungrounded hallucinations, making user-visible TTFT $\approx 4,794.0\text{ ms}$.

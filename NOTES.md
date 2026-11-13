@@ -318,53 +318,60 @@ This log records decisions, exact empirical measurements, unexpected findings, a
 
 ### Artifacts Built
 - Created `analysis/tables.py` and generated markdown artifact `analysis/TABLES.md`.
-- Read from `results.csv` (136 validated execution rows, 100% compliant with Hard Rule #5) to synthesize Tables 1, 2a, 2b, and 3.
+- Read from `results.csv` (212 validated execution rows, 100% compliant with Hard Rule #5) to synthesize Tables 1, 2a, 2b, and 3.
 
 ### Table 1: Model Service & Rate Limit Parameters (`qwen/qwen3.8-27b`)
-- **RPM**: 30 req/min (High confidence, observed in `x-ratelimit-limit-requests`)
-- **TPM**: 8,000 tokens/min (High confidence, observed in `x-ratelimit-limit-tokens`)
-- **RPD**: 1,000 req/day (High confidence, verified in docs and header decrements)
-- **TPD**: 500,000 tokens/day (High confidence, official Groq free tier limit)
-- **Concurrency Plateau**: ~3 in-flight requests (High confidence; 3 parallel calls took 470.4ms with zero queuing overhead)
-- **Limit Behavior**: HTTP 429 Too Many Requests with JSON body and `retry-after: 17` (Directly observed in `raw/probe_429.json`)
-- **Recovery Time**: 18.0s (Directly probed recovery; returned 200 OK after 18s in 659ms)
+- **Daily Request Pool (RPD)**: 1,000 requests (High confidence, observed directly in `x-ratelimit-limit-requests: 1000`)
+- **Request Refill Rate**: 1 req / 1m26.4s rolling (High confidence, observed in `x-ratelimit-reset-requests: 1m26.4s` = $86,400\text{s} / 1,000$)
+- **Requests / Minute (RPM)**: 30 req/min (Medium confidence, official Groq docs; unobserved as response header)
+- **Input Tokens / Minute (ITPM)**: 7,000 ITPM enforced (High confidence, observed in 429 error payload body `Limit 7000`; gateway header reports 8000)
+- **Token Refill Rate**: ~116.7 tokens/sec continuous (High confidence, empirically measured across 8s/20s intervals in `raw/probe_recovery_refill_curve.json`)
+- **Tokens / Day (TPD)**: 200,000 tokens/day enforced (High confidence, observed directly in live HTTP 429 error body: `Limit 200000, Used 199399`; official Groq docs claim 500,000)
+- **Single-Request Limit**: HTTP 413 Payload Too Large (High confidence, observed in `raw/probe_429_deliberate.json` on 8,512 token prompt)
+- **Cumulative Limit Behavior**: HTTP 429 Too Many Requests (High confidence, observed in `raw/probe_429.json` when 60s sliding window exceeded 7,000 tokens)
+- **Concurrency Lower Bound**: >= 3 in-flight (High confidence, probed with 3 parallel calls in Phase 4; finished in 470.4ms)
 
 ### Table 2a & 2b: Cross-Scenario Load Performance Summary
 
 | Scenario | Offered Rate | Duration | TTFT p50 | Total p50 | Success % | Rate Limited % | Timeout/Drop % | Peak Queue | Tokens/Ans | Cost/1k Ans |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **`steady`** | 2.5 req/m | 121.5s | 700.8 ms | 1,485.4 ms | 100.0% | 0.0% | 0.0% | 1 | 1,728.6 | $0.0874 |
-| **`burst`** | 89.4 req/m | 16.8s | 3,507.5 ms | 10,419.9 ms | 4.0% | 0.0% | 96.0% (5 shed) | 20 | 1,042.0 | $0.0529 |
-| **`sustained_overload`** | 32.9 req/m | 36.5s | 0.0 ms | 9,316.8 ms | 0.0% | 0.0% | 100.0% | 20 | 5.4 | $0.0003 |
-| **`limit_halved`** | 31.1 req/m | 19.3s | 4,290.3 ms | 9,335.5 ms | 10.0% | 0.0% | 90.0% | 4 | 921.0 | $0.0468 |
+| **`steady`** | 2.8 req/m | 325.9s | 1,331.4 ms | 3,062.1 ms | 100.0% | 0.0% | 0.0% | 1 | 1,806.9 | $0.0915 |
+| **`burst`** | 72.0 req/m | 20.8s | 1,212.4 ms | 8,100.0 ms | 4.0% | 0.0% | 96.0% | 20 | 1,082.0 | $0.0549 |
+| **`sustained_overload`** | 39.9 req/m | 30.1s | 0.0 ms | 8,100.0 ms | 0.0% | 0.0% | 100.0% | 20 | 11.0 | $0.0006 |
+| **`limit_halved`** | 22.2 req/m | 27.1s | 2,529.8 ms | 8,100.0 ms | 30.0% | 0.0% | 70.0% | 4 | 1,104.3 | $0.0561 |
 | **`daily_exhausted`** | 30,000 req/m | 0.0s | 0.0 ms | 0.0 ms | 0.0% | 100.0% | 0.0% | 0 | 0.0 | $0.0000 |
 
-### Table 3: Retrieval Quality vs Cost Comparison
+### Table 3: Retrieval Quality vs Cost Comparison (Real Groq Benchmark)
 
 | Retrieval Setting | Configuration | Quality % | Tokens / Ans | TTFT p50 | Total p50 | Low-Limit / Degraded Fit |
 | :--- | :--- | :---: | :---: | :---: | :---: | :---: |
-| **Setting A (`bm25_k3_c256`)** | 256 tokens × top-3 (BM25) | **56.2%** | **1,923.7** | 48.0 ms | 161.8 ms | **Yes (Fastest / Lowest Token Cost)** |
-| **Setting B (`dense_k5_c512`)** | 512 tokens × top-5 (Dense BGE) | **37.5%** | 2,854.3 | 47.1 ms | 146.7 ms | **No (48% more tokens; dilutes tables)** |
-| **Setting C (`rerank_k3_c256`)** | 256 tokens × top-8 (Re-ranked to top-3) | **56.2%** | 2,028.3 | 45.6 ms | 192.2 ms | **Yes (Combines precision & recall)** |
+| **Setting A (`bm25_k3_c256`)** | 256 tokens × top-3 (BM25 Lexical) | **56.2%** | **2,944.2** | 685.3 ms | 2,501.3 ms | **Yes (Fast / Cheap)** |
+| **Setting B (`dense_k3_c256`)** | 256 tokens × top-3 (Dense BGE Semantic) | **68.8%** | **3,139.1** | 592.3 ms | 2,549.6 ms | **Yes (+12.6% lift over BM25)** |
+| **Setting C (`dense_k3_c512`)** | 512 tokens × top-3 (Dense BGE Context) | **66.7%** | **4,016.8** | 712.6 ms | 2,464.2 ms | **No (+36.4% tokens; chunk dilution)** |
 
-### Slow Request Latency Decomposition (`res_745752`)
-- **Total Latency (`total_ms`)**: **7,459.3 ms**
-- **TTFT (`first_token_ms`)**: **1,514.2 ms**
-- **Components (Hard Rule #4 Strictly Enforced)**:
-  - Retrying: `0.0 ms` (0.0% — computed directly from `retries = 0`)
-  - Waiting (Queue): **Not measured in results.csv** (12-column schema constraint per Hard Rule #5)
-  - Working (Inference): **Upper bound 7,459.3 ms** (100.0% of elapsed time minus unmeasured queue wait)
-  - Step Breakdown: **Not measured in results.csv** (per Hard Rule #4, not tracked in 12-column schema)
+### Slow Request Latency Decomposition (`eval_bm25_k3_c256_q02` on Real Groq)
+- **Total Latency (`total_ms`)**: **4,794.0 ms**
+- **TTFT (`first_token_ms`)**: **1,261.3 ms** (Internal Step 1 TTFT)
+- **Components (from `raw/timing_breakdown.jsonl`)**:
+  - Waiting (Queue): `0.0 ms` (0.0% — dispatched immediately)
+  - Working (Inference & Retrieval): `4,793.9 ms` (100.0%)
+    - Step 1 (Understand): `928.3 ms` (19.4%)
+    - Step 2 (Retrieve BM25): `2.7 ms` (0.1%)
+    - Step 3 (Decide): `947.4 ms` (19.8%)
+    - Step 4 (Draft): `1,404.8 ms` (29.3%)
+    - Step 5 (Verify): `1,510.8 ms` (31.5%)
+  - Retrying: `0.0 ms` (0.0% — passed first verification)
 - **Pre vs Post First Token Split**:
-  - **Pre-First-Token Delay**: `1,514.2 ms` (**20.3%**)
-  - **Post-First-Token Delay**: `5,945.1 ms` (**79.7%**)
-- **Key Insight**: Over **79.7% of total latency occurs AFTER the first token is emitted**. In multi-stage agentic/RAG architectures, standard TTFT captures only Step 1; the user's perception of slowness is driven by downstream multi-step completion phases.
+  - **Pre-First-Token Delay**: `1,261.3 ms` (**26.3%**)
+  - **Post-First-Token Delay**: `3,532.7 ms` (**73.7%**)
+- **User-Visible TTFT**: **4,794.0 ms** (100.0% — draft tokens held until verification passes)
 
-### Three Non-Obvious Empirical Surprises
-1. **512-Token Chunks Produced Worse Accuracy Than 256-Token Chunks (37.5% vs 56.2%)**:
-   - Larger chunks diluted localized table data (e.g., Attention Table 2 BLEU benchmarks) with surrounding narrative text, confusing the model during verification.
-2. **Degraded Mode is BOTH Faster AND Higher Quality Than Dense 512-Token Retrieval**:
-   - Setting A saves 32.6% in token overhead while delivering 56.2% quality compared to Setting B's 37.5%.
-3. **Multi-Step Sequential Compounding Causes Timeouts Before Rate Limits**:
-   - 73% of burst failures were 8.0s deadline timeouts caused by 4-5 sequential calls multiplying latency under load, rather than upstream 429 rejections.
-
+### Four Non-Obvious Empirical Surprises
+1. **The Binding Constraint is Tokens, Not Requests (7,000 ITPM Knee at 4.0 APM)**:
+   - While RPM is 30, verified multi-step RAG consumes ~2,500 tokens/answer, creating a strict physical ceiling of ~2.8 answers/minute.
+2. **Dense BGE Delivers +12.6% Lift Over BM25, But Chunk Dilution Harms Precision**:
+   - Dense BGE achieved 68.8% vs 56.2% for BM25. However, expanding chunks to 512 tokens increased token cost by 36.4% and dropped quality to 66.7% due to chunk dilution.
+3. **Multi-Step Sequential Compounding Causes Timeouts Before Rate Limits Under Concurrency**:
+   - In the burst scenario, 96.0% of failures were 8.0s deadline timeouts from multi-step latency compounding, not 429 errors.
+4. **Live Free Tier Quota is 200,000 TPD, Not 500,000**:
+   - Official Groq docs state 500k TPD, but live error payload at token 199,399 revealed an enforced 200,000 TPD cap.

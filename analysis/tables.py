@@ -47,7 +47,7 @@ def build_table_1() -> str:
         ("Requests / Minute (RPM)", "30 req/min", "Medium", "Official Groq Docs (https://console.groq.com/docs/rate-limits, Nov 2026); unobserved as header"),
         ("Input Tokens / Minute (ITPM)", "7,000 ITPM (enforced)", "High", "Observed in 429 error payload body (Limit 7000); gateway header reports 8000"),
         ("Token Refill Rate", "~116.7 tokens/sec (continuous)", "High", "Empirically measured across 8s/20s intervals in raw/probe_recovery_refill_curve.json"),
-        ("Tokens / Day (TPD)", "500,000 tokens/day", "Medium", "Official Groq Docs (Nov 2026); unobserved as response header"),
+        ("Tokens / Day (TPD)", "200,000 tokens/day (enforced)", "High", "Observed directly in live HTTP 429 error body ('Limit 200000, Used 199399'); official Groq docs claim 500,000"),
         ("Single-Request Limit", "HTTP 413 Payload Too Large", "High", "Observed in raw/probe_429_deliberate.json on 8,512 token prompt"),
         ("Cumulative Limit Behavior", "HTTP 429 Too Many Requests", "High", "Observed in raw/probe_429.json when 60s sliding window exceeded 7,000 tokens"),
         ("Concurrency Lower Bound", ">= 3 in-flight", "High", "Probed with 3 parallel calls in Phase 4 (finished in 470.4ms); upper cliff unmeasured"),
@@ -401,7 +401,7 @@ def analyze_slow_request(df: pd.DataFrame, target_req_id: str = "eval_bm25_k3_c2
             f"- **User-Visible TTFT**: **{user_ttft:.1f} ms** (100.0% of total duration)",
             "",
             "> **Architectural Insight & Streaming Trade-off**:",
-            "> - **Why >83% of delay occurs AFTER internal first token**: In an agentic pipeline, `first_token_ms` measures only the first chunk of Step 1. The remaining 83.1% is spent executing the remaining 4 sequential reasoning steps.",
+            f"> - **Why >{post_ttft_pct:.0f}% of delay occurs AFTER internal first token**: In an agentic pipeline, `first_token_ms` measures only the first chunk of Step 1. The remaining {post_ttft_pct:.1f}% is spent executing the remaining 4 sequential reasoning steps.",
             "> - **The Streaming Decision**: We deliberately do **not** stream intermediate draft tokens from Step 4 to the user prior to Step 5 verification. If an unverified draft is streamed and then rejected by the verification gate, the user experiences contradictory output and hallucination leaks. Holding output until verification costs +2,244 ms in perceived initial latency, but provides a formal guarantee of groundedness.",
         ])
     else:
@@ -425,16 +425,19 @@ def explain_surprises() -> str:
     lines = [
         "### Genuinely Surprising Empirical Discoveries",
         "",
-        "#### Surprise 1: The Binding Constraint is Tokens, Not Requests (7,000 ITPM Knee at 3.0 APM)",
+        "#### Surprise 1: The Binding Constraint is Tokens, Not Requests (7,000 ITPM Knee at 4.0 APM)",
         "- **The Intuition**: The service advertises a 30 RPM rate limit, leading intuitive engineers to design for up to 30 requests/minute.",
-        "- **The Empirical Reality**: Each verified RAG answer requires 4–5 sequential LLM passes consuming ~2,400–2,650 input tokens. Under Groq's enforced 7,000 ITPM limit, the true ceiling is strictly $\\frac{7,000}{2,500} \\approx 2.8$ answers/minute! In our capacity curve experiment (1, 2, 3, 4, 6 APM), offered loads of 1.0 and 2.0 APM succeeded at 100%, but 3.0 APM immediately saturated the token bucket, triggering 429 backoff and pushing requests past the 8.0s deadline.",
+        "- **The Empirical Reality**: Each verified RAG answer requires 4–5 sequential LLM passes consuming ~2,500–3,100 input tokens. Under Groq's enforced 7,000 ITPM limit, the true sustainable ceiling is strictly $\\frac{7,000}{\\sim 2,500} \\approx 2.8$ answers/minute. In our capacity curve sweep (1.0, 2.0, 2.5, 3.0, 4.0, 6.0 APM with reset buckets), offered loads up to 3.0 APM (6,473 tokens/min, 92.5% of cap) succeeded at 100%, but 4.0 APM (8,348 tokens/min) immediately breached the 7,000 ITPM window, tripping 429 backoffs and inflating p95 latency to 5,830 ms. At 6.0 APM, throughput hard-capped at 4.60 APM.",
         "",
-        "#### Surprise 2: Dense Semantic Retrieval Improves Quality (+8.7%) But Induces Heavy Rate-Limit Pressure",
-        "- **The Intuition**: Dense vector embeddings are universally recommended over BM25 for modern RAG pipelines.",
-        "- **The Empirical Reality**: Dense BGE-small (`dense_k3_c256`) increased completed-answer quality from 53.8% to 62.5% by successfully retrieving multi-concept questions lacking lexical overlap. However, dense retrieval retrieves dense token-heavy passages that rapidly exhaust the 7,000 ITPM sliding window under continuous load (causing 8 of 16 requests to hit 429s). Under high traffic, dynamically shedding to BM25 or reducing $k$ from 3 to 1 is an essential survival lever.",
+        "#### Surprise 2: Dense Semantic Retrieval Delivers +12.6% Quality Over BM25, But Chunk Dilution Harms Precision",
+        "- **The Intuition**: Larger chunk sizes provide more surrounding context and should improve synthesis accuracy.",
+        "- **The Empirical Reality**: Moving from lexical BM25 (`bm25_k3_c256`) to dense semantic retrieval (`dense_k3_c256`) increased verified quality from 56.2% to 68.8% (+12.6% lift) by successfully capturing paraphrased multi-sentence reasoning (e.g., base Transformer parameters and Inner Monologue) that BM25 missed. However, expanding chunk size from 256 to 512 tokens (`dense_k3_c512`) caused **chunk dilution**: token consumption increased by +36.4% (4,016.8 vs 2,944.2 tokens/answer) while quality dropped to 66.7% because extraneous surrounding context diluted the model's extraction focus.",
         "",
         "#### Surprise 3: Multi-Step Compounding Causes Timeouts Before Rate Limits Under Concurrency",
-        "- **The Empirical Reality**: In the `burst` scenario (25 concurrent requests), 96.0% of failures were **timeouts at the 8.0s deadline boundary**, not HTTP 429 rate limit rejections! Because our pipeline runs 4–5 sequential LLM passes, concurrency queuing delay plus multi-step latency pushed total request time to ~8.1s, causing the resilience engine to cancel doomed requests before wasting further quota.",
+        "- **The Empirical Reality**: In the `burst` scenario (25 concurrent requests), 96.0% of failures were **timeouts at the 8.0s deadline boundary**, not HTTP 429 rate limit rejections! Because our pipeline runs 4–5 sequential LLM passes, concurrency queuing delay plus multi-step latency pushed total request time past the 8.0s deadline, proving that multi-step pipelines fail via latency compounding before raw HTTP error limits.",
+        "",
+        "#### Surprise 4: The 200,000 TPD Discovery (The Second Number the Docs Got Wrong)",
+        "- **The Empirical Reality**: While official Groq documentation (as of Nov 2026) specifies a 500,000 Tokens Per Day (TPD) tier for `qwen/qwen3.8-27b`, live API traffic on the free tier returned HTTP 429 at token 199,399 with an explicit diagnostic body: `tokens per day (TPD): Limit 200000, Used 199399, Requested 1972`. The live enforced quota is **200,000 TPD**, a 60% reduction compared to published documentation.",
     ]
     return "\n".join(lines)
 

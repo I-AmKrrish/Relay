@@ -1,12 +1,16 @@
 import json
 
-with open("data/table3_detailed_answers.json", "r", encoding="utf-8") as f:
+with open("data/table3_detailed_answers.json", encoding="utf-8") as f:
     runs = json.load(f)
 
-for run in runs:
-    print(f"\n{'='*70}\nSetting: {run['setting']} ({run['setting_id']})\n{'='*70}")
-    for res in run["results"]:
-        ans = res.get("final_answer", "").replace("\n", " ")
-        print(f"[{res['id']}] Status: {res['status']:<12} | Grade: {res['grade']:<18} | Tokens: {res['tokens_total']}")
-        print(f"     Answer: {ans[:140]}...")
-
+for r in runs:
+    print("=" * 60)
+    ok_items = [x for x in r["results"] if x["status"] == "ok"]
+    print(r["setting"], "| Completed OK:", len(ok_items), "out of", len(r["results"]))
+    for x in r["results"]:
+        qid = x["id"]
+        status = x["status"]
+        grade = x["grade"]
+        tokens = x["tokens_total"]
+        ans_preview = x["final_answer"].replace("\n", " ")[:60]
+        print(f"  {qid}: status={status:<12} | grade={grade:<17} | tok={tokens:4d} | ans={ans_preview}...")
