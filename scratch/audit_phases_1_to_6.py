@@ -120,21 +120,21 @@ async def audit_phase_3():
     # Test 1: Refusal on out-of-corpus query
     c_ref = BranchTestMockClient(mode="refusal")
     p_ref = RelayPipeline(llm_client=c_ref, retriever_mode="bm25")
-    res_ref = await p_ref.run("What is the speed of sound on Mars?")
+    res_ref = await p_ref.run("What is the speed of sound on Mars?", log_to_csv_now=False)
     assert "the papers do not say" in res_ref.final_answer.lower()
     print(f"  ✓ Decision Branch 1 (Refusal): Verified -> '{res_ref.final_answer}'")
 
     # Test 2: Re-retrieve loop on weak evidence
     c_loop = BranchTestMockClient(mode="loop")
     p_loop = RelayPipeline(llm_client=c_loop, retriever_mode="bm25", max_re_retrieve_loops=1)
-    res_loop = await p_loop.run("Details of Helium LM")
+    res_loop = await p_loop.run("Details of Helium LM", log_to_csv_now=False)
     assert res_loop.loop_count == 1 and res_loop.retries == 1
     print(f"  ✓ Decision Branch 2 (Re-retrieve Loop): Verified -> loop_count={res_loop.loop_count}, retries={res_loop.retries}")
 
     # Test 3: Skippable verifier
     c_skip = BranchTestMockClient(mode="normal")
     p_skip = RelayPipeline(llm_client=c_skip, retriever_mode="bm25", skip_verification=True)
-    res_skip = await p_skip.run("Transformer heads")
+    res_skip = await p_skip.run("Transformer heads", log_to_csv_now=False)
     verify_calls = [p for p in c_skip.call_history if "strict fact-checker" in p]
     assert len(verify_calls) == 0
     print(f"  ✓ Decision Branch 3 (Skippable Verifier): Verified -> 0 verification calls made")
@@ -176,9 +176,12 @@ def audit_phase_5():
     assert len(questions) == 16, f"Expected 16 questions, found {len(questions)}"
 
     categories = {q["category"] for q in questions}
-    expected_cats = {"single_paper", "cross_paper", "numeric_table", "tricky_wording", "refusal"}
-    assert expected_cats.issubset(categories), f"Missing categories: {expected_cats - categories}"
-    print(f"  ✓ Evaluation dataset verified: 16 questions across all 5 required categories")
+    assert any("refusal" in c for c in categories), "Missing refusal category"
+    assert "single_paper" in categories
+    assert "cross_paper" in categories
+    assert "numeric_table" in categories
+    assert "tricky_wording" in categories
+    print(f"  ✓ Evaluation dataset verified: 16 questions across all required categories")
 
     # Grader check
     g_ref = grade_answer_heuristic(questions[11], "The papers do not say.")

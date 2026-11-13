@@ -471,7 +471,7 @@ class RelayPipeline:
                 )
                 if log_to_csv_now:
                     log_result_to_csv(res)
-                log_result_to_sidecar(res, deadline_seconds=deadline_seconds, user_visible_ttft_ms=user_ttft_ms)
+                    log_result_to_sidecar(res, deadline_seconds=deadline_seconds, user_visible_ttft_ms=user_ttft_ms)
                 return res
 
             # Step 4: Draft Answer
@@ -552,7 +552,7 @@ class RelayPipeline:
 
             if log_to_csv_now:
                 log_result_to_csv(result)
-            log_result_to_sidecar(result, deadline_seconds=deadline_seconds, user_visible_ttft_ms=user_ttft_ms)
+                log_result_to_sidecar(result, deadline_seconds=deadline_seconds, user_visible_ttft_ms=user_ttft_ms)
             return result
 
         except asyncio.TimeoutError:
@@ -580,7 +580,7 @@ class RelayPipeline:
             )
             if log_to_csv_now:
                 log_result_to_csv(timeout_res)
-            log_result_to_sidecar(timeout_res, deadline_seconds=deadline_seconds, user_visible_ttft_ms=total_ms)
+                log_result_to_sidecar(timeout_res, deadline_seconds=deadline_seconds, user_visible_ttft_ms=total_ms)
             return timeout_res
 
 
