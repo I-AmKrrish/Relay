@@ -141,7 +141,7 @@ This log records decisions, exact empirical measurements, unexpected findings, a
 | **RPM (Requests/min)** | 30 RPM nominal burst | Medium | Groq documentation and observed burst behavior; header tracks rolling daily requests. |
 | **TPM (Tokens/min)** | 8,000 TPM (7,000 ITPM) | **High** | Directly observed in `x-ratelimit-limit-tokens: 8000` and 429 error body (`Limit 7000 ITPM`). |
 | **RPD (Requests/day)** | 1,000 RPD | **High** | Directly observed in `x-ratelimit-limit-requests: 1000` header. |
-| **TPD (Tokens/day)** | ~500,000 TPD | Medium | Published Groq free tier terms; no dedicated daily token counter header. |
+| **TPD (Tokens/day)** | 200,000 TPD (enforced) | **High** | Directly observed in live HTTP 429 error body (`Limit 200000, Used 199399`); official Groq docs claim 500,000. |
 | **Concurrency Limit** | $\ge 3$ in-flight parallel calls | **High** | Directly measured: 3 concurrent requests completed in 470.4 ms batch wall time with zero queuing. |
 | **TTFT (Streaming)** | Median 389 ms (range 295–506 ms) | **High** | Directly measured across 8 streaming probe calls. |
 | **Total Latency** | Median 455 ms (range 342–540 ms) | **High** | Directly measured across 8 streaming probe calls. |
@@ -259,7 +259,7 @@ This log records decisions, exact empirical measurements, unexpected findings, a
 
 6. **Daily Quota Exhaustion Behavior**:
    - When the 1,000 RPD budget is depleted, the engine emits a structured response:
-     - Clear explanation of the 1,000 request / 500,000 token limit.
+     - Clear explanation of the 1,000 request / 200,000 token limit.
      - Exact ISO timestamp of the next midnight UTC reset.
      - Calculated human-readable remaining hours until reset.
      - Explicit confirmation that the request was *not* silently enqueued.

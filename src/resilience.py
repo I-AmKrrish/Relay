@@ -234,7 +234,7 @@ class ResilienceEngine:
             "status": "daily_quota_exhausted",
             "request_id": request_id,
             "message": (
-                "The Relay research assistant has reached its daily free-tier computation budget (1,000 requests / 500,000 tokens). "
+                "The Relay research assistant has reached its daily free-tier computation budget (1,000 requests / 200,000 tokens). "
                 "To ensure strict cost controls, no further automated calls can be made today."
             ),
             "quota_reset_utc": midnight_utc.isoformat(),
