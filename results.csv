@@ -212,3 +212,4 @@ eval_dense_k3_c512_q15,retrieval_sweep,real,2026-11-13T16:30:39.836871+00:00,721
 eval_dense_k3_c512_q16,retrieval_sweep,real,2026-11-13T16:31:04.418810+00:00,798.4,1612.2,ok,0,1821,108,dense_k3_c512,refused_correctly
 eval_dense_k3_c512_q01,retrieval_sweep,real,2026-11-13T16:32:42.067255+00:00,605.0,2947.5,ok,0,6290,175,dense_k3_c512,correct
 
+eval_dense_k3_c512_q06,retrieval_sweep,real,2026-11-13T17:56:50.399685+00:00,592.9,2608.9,ok,0,6423,177,dense_k3_c512,correct

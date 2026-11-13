@@ -1,6 +1,6 @@
 # The Relay: Evidence & Defense Dossier
 
-This document provides the definitive empirical measurements, architectural proofs, code references, and design rationales for **The Relay** ML Engineering take-home defense. Every single figure is mathematically verified against [`results.csv`](file:///c:/Users/rabbu/OneDrive/Desktop/Projects/Relay/results.csv) (212 valid rows, exact 12-column schema) and sidecar microsecond telemetry [`raw/timing_breakdown.jsonl`](file:///c:/Users/rabbu/OneDrive/Desktop/Projects/Relay/raw/timing_breakdown.jsonl) via [`analysis/verify_tables.py`](file:///c:/Users/rabbu/OneDrive/Desktop/Projects/Relay/analysis/verify_tables.py).
+This document provides the definitive empirical measurements, architectural proofs, code references, and design rationales for **The Relay** ML Engineering take-home defense. Every single figure is mathematically verified against [`results.csv`](file:///c:/Users/rabbu/OneDrive/Desktop/Projects/Relay/results.csv) (213 valid rows, exact 12-column schema) and sidecar microsecond telemetry [`raw/timing_breakdown.jsonl`](file:///c:/Users/rabbu/OneDrive/Desktop/Projects/Relay/raw/timing_breakdown.jsonl) via [`analysis/verify_tables.py`](file:///c:/Users/rabbu/OneDrive/Desktop/Projects/Relay/analysis/verify_tables.py).
 
 ---
 
@@ -110,12 +110,13 @@ All numbers below are generated directly from [`results.csv`](file:///c:/Users/r
 | :--- | :--- | :---: | :---: | :---: | :---: | :---: |
 | **Setting A (`bm25_k3_c256`)** | 256 tokens × top-3 (BM25 Lexical) | **56.2%** | 2944.2 | 685.3 ms | 2501.3 ms | **Yes (Fast / Cheap)** |
 | **Setting B (`dense_k3_c256`)** | 256 tokens × top-3 (Dense BGE Semantic) | **68.8%** | 3139.1 | 592.3 ms | 2549.6 ms | **Yes (Fast / Cheap)** |
-| **Setting C (`dense_k3_c512`)** | 512 tokens × top-3 (Dense BGE Context) | **66.7%** | 4016.8 | 712.6 ms | 2464.2 ms | **No (High tokens; dilutes tables)** |
+| **Setting C (`dense_k3_c512`)** | 512 tokens × top-3 (Dense BGE Context) | **68.8%** | 4178.2 | 705.1 ms | 2473.2 ms | **No (High tokens; dilutes tables)** |
 
 > *Quality Scoring Methodology & Controlled Isolations*:
-> - **Zero Status/Grade Contradictions**: Quality is calculated strictly on completed requests (`status == 'ok'`). All 47 rows in `results.csv` for `retrieval_sweep` completed with `status == 'ok'` under dynamic token pacing ($\ge 4,500$ token threshold).
-> - **Isolation 1 (Dense BGE vs BM25 at constant chunk size 256)**: Setting B achieved **68.8% vs 56.2%** (+12.6% quality lift). Dense semantic embeddings successfully matched multi-sentence conceptual relationships (e.g. `q01` base Transformer architecture and `q10` Inner Monologue) that BM25 missed due to keyword dispersion across paragraphs.
-> - **Isolation 2 (Chunk Size 512 vs 256 with Dense Retriever held constant)**: Setting C consumed **+36.4% more tokens** (4,016.8 vs 2,944.2 tokens/answer) while quality dropped slightly to **66.7%** (10/15). Larger 512-token chunks diluted the model's attention with extraneous surrounding narrative on technical table extraction (`q10`), proving **chunk dilution**.
+> - **Zero Status/Grade Contradictions**: Quality is calculated strictly on completed requests (`status == 'ok'`). All 48 rows in `results.csv` for `retrieval_sweep` completed with `status == 'ok'` under dynamic token pacing ($\ge 4,500$ token threshold).
+> - **Sample Size & Statistical Reality ($N=16$)**: Setting B answered **11/16** correctly vs Setting A's **9/16**—a difference of exactly **two questions**. Their 95% Wilson score confidence intervals overlap heavily ([44.4%, 85.8%] for B vs [33.2%, 76.9%] for A; McNemar's exact test $p = 0.50$). This cannot be claimed as a statistically proven "quality lift"; rather, it reflects qualitative retrieval differences on specific multi-concept queries.
+> - **Qualitative Mechanism (`q01` and `q10`)**: Dense semantic retrieval resolved two specific questions where BM25 suffered vocabulary mismatch: `q01` (base Transformer parameters, where dimensions are split across paragraphs) and `q10` (Moshi Inner Monologue, phrased with descriptive concepts lacking query keywords). On the remaining 14 of 16 questions, BM25 and Dense BGE agreed completely (including all 5 unanswerable questions truthfully refused).
+> - **Chunk Size Isolation & Cost Inefficiency (512 vs 256 tokens)**: Setting C consumed **+33.1% more tokens** (4,178.2 vs 3,139.1 tokens/answer) and achieved **11/16 (68.8%)**, tying Setting B in overall accuracy. Individual question analysis reveals qualitative trade-offs: 512-token chunks gained `q11` (Moshi text tokenizer) but lost `q10` (Inner Monologue, where extra narrative diluted the model's extraction focus). Larger chunks increased token burn rate by one third without delivering net accuracy gains.
 > - **Truthful Refusal Invariant**: All 5 near-miss unanswerable questions (`q12`–`q16`) were truthfully refused across all 3 settings without hardcoded keyword shortcuts.
 
 ---
@@ -232,8 +233,8 @@ The system delivers 4 distinct, transparent user experiences:
    - *Pre-fix Architecture (Synchronous CPU retrieval on event loop + lazy model loading)*: Experienced a **5,791.2 ms maximum event loop lag** during cold-start model initialization and synchronous retrieval passes. This pushed p95 total latency to **7,842.1 ms** (on the brink of the 8.0s deadline) and produced an initial timeout (93.3% success).
    - *Post-fix Architecture (`asyncio.to_thread` + preloaded singleton models)*: Reduced maximum event loop lag by **81.3%** down to **1,084.1 ms**, cut p95 total latency from 7,842 ms down to **5,941.0 ms**, and achieved **100.0% success** across all 15 requests.
    - *Root Cause of Original 53% Failure*: Auditing the git history of the original steady run (`commit 795370c`) revealed that requests were arriving with an 8.0s/clustered interval ($\sim 9.7\text{ req/min}$), generating $\sim 25,000\text{ tokens/min}$ against the 7,000 ITPM cap. The original collapse was therefore **both token bucket exhaustion under rapid arrivals AND event-loop blocking during cold-start/retrieval**. Isolating the rate at 2.6 req/min removed token exhaustion, allowing us to isolate and prove the 1,900 ms p95 latency reduction delivered by the async fix.
-4. **Chunk Dilution Directly Harms RAG Accuracy & Exhausts Daily Quotas**:
-   In our 3-setting real Groq benchmark, doubling chunk size from 256 to 512 tokens while keeping the dense BGE retriever constant (`Setting C` vs `Setting B`) caused a **+36.4% surge in prompt tokens** (4,016.8 vs 2,944.2 tokens/answer) and **reduced accuracy** from 68.8% to 66.7%. Larger chunks introduced irrelevant surrounding narrative text that diluted the model's focus on fine-grained table cells (e.g. `q10`), while simultaneously burning through our daily token quota twice as fast.
+4. **Chunk Inefficiency & Dilution (512 vs 256 tokens)**:
+   In our 3-setting real Groq benchmark, doubling chunk size from 256 to 512 tokens while keeping the dense BGE retriever constant (`Setting C` vs `Setting B`) caused a **+33.1% surge in prompt tokens** (4,178.2 vs 3,139.1 tokens/answer) with zero net accuracy gain (both tied at 11/16, 68.8%). While 512-token chunks helped on `q11`, it caused extraction dilution on `q10`, proving that larger chunks burn daily quotas significantly faster without improving overall precision.
 
 ---
 

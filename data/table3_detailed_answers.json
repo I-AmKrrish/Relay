@@ -427,14 +427,14 @@
       },
       {
         "id": "q06",
-        "status": "rate_limited",
-        "grade": "wrong",
-        "first_token_ms": 0.0,
-        "total_ms": 1729.728799982695,
-        "tokens_in": 147,
-        "tokens_out": 14,
-        "tokens_total": 161,
-        "final_answer": ""
+        "status": "ok",
+        "grade": "correct",
+        "first_token_ms": 592.8585999936331,
+        "total_ms": 2608.896800025832,
+        "tokens_in": 6423,
+        "tokens_out": 177,
+        "tokens_total": 6600,
+        "final_answer": "The Transformer (big) model achieved a BLEU score of 28.4 on the WMT 2014 English-to-German translation test [Attention Is All You Need, Sec 6 Results, p. 8]."
       },
       {
         "id": "q07",

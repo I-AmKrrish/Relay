@@ -27,12 +27,12 @@
     "setting": "Setting C (512-tok, top-3 Dense BGE)",
     "setting_id": "dense_k3_c512",
     "variable_isolated": "Chunk Size: 512 vs 256 (Dense retriever held constant)",
-    "completed_ok": 15,
+    "completed_ok": 16,
     "total_offered": 16,
-    "quality_accuracy_pct": 66.7,
-    "avg_tokens_per_answer": 4016.8,
-    "avg_ttft_ms": 712.6,
-    "avg_total_ms": 2464.2,
+    "quality_accuracy_pct": 68.8,
+    "avg_tokens_per_answer": 4178.2,
+    "avg_ttft_ms": 705.1,
+    "avg_total_ms": 2473.2,
     "cheap_under_limit": false
   }
 ]

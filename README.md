@@ -72,7 +72,7 @@ relay/
     verify_tables.py    # Rule 4 automated verification gate & consistency checker
     TABLES.md           # Formatted markdown tables & empirical findings
   raw/                  # Raw probe logs, refill curves, and sidecar timing_breakdown.jsonl
-  results.csv           # 212 validated execution rows (exact 12-column schema)
+  results.csv           # 213 validated execution rows (exact 12-column schema)
   NOTES.md              # Detailed running engineering log across all phases
   WRITEUP_EVIDENCE.md   # Definitive section-by-section evidence dossier for final defense
   requirements.txt      # Python dependencies
@@ -150,9 +150,9 @@ This reads `results.csv` and ensures 100% mathematical consistency across all ta
    - `daily_exhausted`: Requests rejected in 0ms consuming 0 tokens.
 4. **Table 3 (Retrieval Trade-Offs on Real Groq across 3 Controlled Settings)**:
    - **Setting A (`bm25_k3_c256`)**: Completed 16/16 with **56.2% quality** (9/16: 4 factual + 5 refusals) and 2,944.2 tokens/answer.
-   - **Setting B (`dense_k3_c256`)**: Completed 16/16 with **68.8% quality** (11/16: 6 factual + 5 refusals) and 3,139.1 tokens/answer (**+12.6% quality lift** over BM25). Dense embeddings resolved multi-concept queries (`q01` and `q10`) that BM25 missed due to keyword dispersion.
-   - **Setting C (`dense_k3_c512`)**: Completed 15/16 with **66.7% quality** (10/15: 5 factual + 5 refusals) and 4,016.8 tokens/answer (**+36.4% token overhead**). Demonstrates **chunk dilution**: larger chunks added surrounding narrative that degraded technical precision and accelerated token bucket depletion.
-   - All 47 rows completed with `status == 'ok'` with zero status/grade contradictions.
+   - **Setting B (`dense_k3_c256`)**: Completed 16/16 with **68.8% quality** (11/16: 6 factual + 5 refusals) and 3,139.1 tokens/answer (a 2-question delta over BM25; 95% CIs overlap heavily). Dense embeddings resolved multi-concept queries (`q01` and `q10`) that BM25 missed due to keyword dispersion.
+   - **Setting C (`dense_k3_c512`)**: Completed 16/16 with **68.8% quality** (11/16: 6 factual + 5 refusals) and 4,178.2 tokens/answer (**+33.1% token overhead**). Demonstrates **chunk inefficiency**: doubling chunk size provided zero net accuracy gain (tied at 11/16) while burning through daily token quotas 33% faster.
+   - All 48 rows completed with `status == 'ok'` with zero status/grade contradictions.
 5. **Where the Time Goes (Real Request `eval_bm25_k3_c256_q02`)**:
    - Total latency was 4,794.0 ms, with 100% of time spent in working execution across 5 discrete pipeline stages (Step 1 928ms, Step 2 2.7ms, Step 3 947ms, Step 4 1,405ms, Step 5 1,511ms).
    - Over **73.7% of latency occurred AFTER the first internal token** because of subsequent sequential passes (decide, draft, verify). Output is held until verification passes to prevent streaming ungrounded hallucinations, making user-visible TTFT $\approx 4,794.0\text{ ms}$.
