@@ -193,8 +193,10 @@ Implemented in [`src/resilience.py`](src/resilience.py):
    - The 8.0s deadline is derived directly from the pipeline's attempt-backoff-retry runway:
      $$\text{Runway} = \text{Attempt 1 }(2.0\text{s}) + \text{Backoff Wait }(1.5\text{s}) + \text{Attempt 2 Retry }(2.0\text{s}) + \text{Network Buffer }(2.5\text{s}) = 8.0\text{s}$$
    - Any request waiting in queue for $>3.0\text{s}$ cannot complete two attempts before 8.0s. Inter-step `check_deadline()` assertions drop doomed requests immediately to prevent wasting GPU quota.
-4. **Bounded Queue & Load Shedding**:
-   - Queue capacity: 20 requests. At $\ge 75\%$ capacity (15 requests), incoming requests automatically switch to **Degraded Mode**. At 100% capacity (20 requests), incoming requests are **shed immediately** (`retrieval_setting="shed"`) with 0ms delay.
+4. **Admission Control & In-Flight Concurrency Cap**:
+   - Concurrency limit: 20 in-flight requests (tracked via an `asyncio.Queue` slot counter). Because requests execute immediately upon admission rather than waiting in a worker-pool buffer, `queue_wait_ms` is ~0ms by construction.
+   - At $\ge 75\%$ in-flight capacity (15 active requests), incoming requests automatically switch to **Degraded Mode** to reduce per-request latency.
+   - At 100% capacity (20 concurrent in-flight requests), new incoming requests are **shed immediately** at the door (`retrieval_setting="shed"`) with 0ms delay, preventing unbounded concurrency and out-of-memory crashes.
 
 ### Retry Amplification Experiment ([`raw/retry_amplification_demo.json`](raw/retry_amplification_demo.json))
 Tested with 20 concurrent requests offered against a strict 10 RPM server limit:
@@ -275,3 +277,6 @@ Throughout this project, I used the AI assistant as a rapid implementation accel
 
 5. **Enforcing Rule 4 (Zero Fabrication Gate)**:
    I authored an automated verification gate (`analysis/verify_tables.py`) that mathematically recomputes every metric in every table directly from `results.csv` and sidecar microsecond logs. Any discrepancy broke the build, guaranteeing that every claim in this write-up is verifiable and grounded in raw telemetry.
+
+6. **De-hyping Queueing & Algorithm Claims (The 'CoDel' and 'Waiting Queue' Reality Check)**:
+   The assistant's initial scaffolding labeled the concurrency limiter as 'CoDel-inspired deadline-aware shedding with a bounded queue'. Upon inspecting the code, I caught that it was actually admission control: `put_nowait()` and `get_nowait()` simply bounded in-flight parallel coroutines to 20 without any worker queue or CoDel minimum sojourn time tracking, making queue wait 0ms by definition. I stripped the CoDel buzzwords and documented it honestly as an in-flight concurrency limiter and admission control boundary.

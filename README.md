@@ -41,7 +41,7 @@ Each step records its own microsecond latency to `raw/timing_breakdown.jsonl`: `
 - **Exponential Backoff with Full Jitter**: Follows AWS Full Jitter pattern ($\text{delay} = \text{Uniform}(0, \min(4.0s, 0.5s \times 2^{\text{attempt}}))$) and strictly obeys upstream HTTP 429 `Retry-After` headers.
 - **Safety Rules & Retry Budget**: Only retries safe idempotent codes (`{429, 502, 503, 504, 408}`); non-retryable client errors (`{400, 401, 403, 404, 422}`) fail fast. Global retries are capped at 25% of total requests.
 - **Per-Request Deadline (8.0s)**: Derived from the pipeline's attempt-backoff-retry runway (~2.0s initial attempt + ~1.5s backoff wait + ~2.0s retry attempt + ~2.5s network buffer). Inter-step `check_deadline()` assertions drop doomed requests immediately to prevent wasting quota.
-- **Bounded Queue & Load Shedding**: Queue depth capped at 20. At $\ge 75\%$ capacity, incoming requests automatically switch to **Degraded Mode**; at 100% capacity, excess requests are **immediately shed** with 0ms delay.
+- **Admission Control & Concurrency Cap**: In-flight requests capped at 20. At $\ge 75\%$ in-flight capacity (15 active requests), incoming requests automatically switch to **Degraded Mode**; at 100% capacity (20 concurrent requests), excess requests are **immediately shed** at the door with 0ms delay.
 - **Degraded Mode**: Uses Setting A (256-token BM25) and skips the verification step, reducing prompt token usage by **32.6%** and saving ~1.5s per request, while strictly maintaining the refusal invariant.
 - **Daily Budget Exhaustion**: Provides transparent user notification with exact rolling refill details (1 request refilled every 86.4 seconds).
 

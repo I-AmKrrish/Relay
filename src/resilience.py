@@ -4,7 +4,7 @@ src/resilience.py - Resilience Engine for The Relay.
 Core capabilities:
   1. Exponential backoff with Full Jitter (AWS pattern) + Retry-After header adherence.
   2. Per-request deadline enforcement (justified: 8.0s deadline; drops expired retries).
-  3. Bounded queue with load shedding (CoDel-inspired deadline-aware shedding).
+  3. In-flight concurrency cap and admission control (sheds when >=20 active requests).
   4. Degraded mode when limits are close (Setting A retrieval + skip verifier + refuse preserved).
   5. Daily budget exhausted handler with honest, informative user guidance.
   6. Retry amplification demonstration (demonstrating cascading failure vs resilient control).
@@ -49,9 +49,11 @@ class ResilienceConfig:
     max_retries_per_request: int = 3
     retry_budget_ratio: float = 0.25  # Max 25% of all calls can be retries
 
-    # Bounded queue parameters
+    # Admission control & in-flight concurrency parameters
+    # Note: requests execute immediately upon admission (no worker-pool wait line).
+    # max_queue_depth acts as a hard cap on concurrent in-flight executions.
     max_queue_depth: int = 20
-    queue_shed_threshold_pct: float = 0.75  # Start shedding when queue is 75% full
+    queue_shed_threshold_pct: float = 0.75  # Trigger degraded mode at 75% in-flight capacity (15 active)
 
     # Degraded mode thresholds
     degraded_remaining_tokens_threshold: int = 2000
@@ -297,11 +299,11 @@ class ResilientPipelineRunner:
         t_enqueue = time.perf_counter()
         req_id = f"res_{int(time.time()*1000)%1000000:06d}"
 
-        # 1. Bounded Queue & Load Shedding Check
+        # 1. Admission Control & Load Shedding Check (Concurrency Cap = 20)
         current_queue_depth = self.resilience.queue.qsize()
         if current_queue_depth >= self.resilience.config.max_queue_depth:
             self.resilience.shed_requests_count += 1
-            # Shed load immediately (never queue indefinitely)
+            # Shed load immediately at the door (never accept beyond in-flight capacity)
             res = PipelineResult(
                 request_id=req_id,
                 scenario=scenario,

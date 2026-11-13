@@ -246,10 +246,10 @@ This log records decisions, exact empirical measurements, unexpected findings, a
      - Buffer for network fluctuations (~2.5s)
    - If an in-flight request reaches 8.0s, it is promptly terminated with `status="timeout"` to release resources.
 
-4. **Bounded Queue & Load Shedding Policy**:
-   - **Queue Capacity**: 20 requests.
-   - **Degraded Threshold ($\ge 75\%$ capacity, 15 requests)**: If the queue is 75% full, incoming requests are automatically diverted to **Degraded Mode** to reduce token footprint and compute time.
-   - **Shed Threshold ($100\%$ capacity, 20 requests)**: If the queue reaches 20 requests, additional requests are immediately dropped with `status="error"` and `retrieval_setting="shed"` rather than queued indefinitely, maintaining predictable bounds on memory and latency.
+4. **Admission Control & In-Flight Concurrency Cap**:
+   - **In-Flight Concurrency Cap**: 20 requests. (Tracked via an `asyncio.Queue` slot counter; admitted requests execute immediately rather than waiting in a worker-pool buffer, so queue dwell is ~0ms by construction).
+   - **Degraded Threshold ($\ge 75\%$ in-flight capacity, 15 requests)**: If 15 requests are actively executing, incoming requests are automatically diverted to **Degraded Mode** to reduce token footprint and compute time.
+   - **Shed Threshold ($100\%$ capacity, 20 requests)**: If 20 requests are already in-flight, additional requests are immediately dropped at the door with `status="error"` and `retrieval_setting="shed"` rather than queued indefinitely, maintaining predictable bounds on memory and latency.
 
 5. **Degraded Mode Strategy**:
    - Automatically activated during queue congestion or near rate limits.
