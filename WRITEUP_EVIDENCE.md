@@ -1,18 +1,18 @@
-# The Relay: Evidence & Defense Dossier
+# The Relay: Project Engineering Log & Results Write-up
 
-This document provides the definitive empirical measurements, architectural proofs, code references, and design rationales for **The Relay** ML Engineering take-home defense. Every single figure is mathematically verified against [`results.csv`](file:///c:/Users/rabbu/OneDrive/Desktop/Projects/Relay/results.csv) (213 valid rows, exact 12-column schema) and sidecar microsecond telemetry [`raw/timing_breakdown.jsonl`](file:///c:/Users/rabbu/OneDrive/Desktop/Projects/Relay/raw/timing_breakdown.jsonl) via [`analysis/verify_tables.py`](file:///c:/Users/rabbu/OneDrive/Desktop/Projects/Relay/analysis/verify_tables.py).
+This write-up covers what I built, the empirical measurements from real Groq probes and local stand-in load runs, how the pipeline handles rate limits and latency under concurrency, and what broke along the way. All numbers in the tables below are computed directly from [`results.csv`](results.csv) (213 rows) and the step timer logs in [`raw/timing_breakdown.jsonl`](raw/timing_breakdown.jsonl).
 
 ---
 
 ## 1. What I Built
 
 ### System Architecture
-- **Multi-Step Inspectable Pipeline** ([`src/pipeline.py`](file:///c:/Users/rabbu/OneDrive/Desktop/Projects/Relay/src/pipeline.py)):
+- **Multi-Step Pipeline** ([`src/pipeline.py`](src/pipeline.py)):
   - Built an end-to-end question-answering pipeline grounded exclusively in 3 specific arXiv papers:
     1. *Attention Is All You Need* (`1706.03762v7`) — 15 pages, 24 sections
     2. *Moshi: a speech-text foundation model for real-time dialogue* (`2410.00037v1`) — 66 pages, 36 sections
     3. *Dynamic Chunking for End-to-End Hierarchical Sequence Modeling* (`2507.07955v2`) — 39 pages, 24 sections
-  - Total corpus: 120 pages, 55,815 words, 362,929 characters extracted via [`src/ingest.py`](file:///c:/Users/rabbu/OneDrive/Desktop/Projects/Relay/src/ingest.py).
+  - Total corpus: 120 pages, 55,815 words, 362,929 characters extracted via [`src/ingest.py`](src/ingest.py).
 - **Five Discrete Pipeline Steps** (with independent latency timers):
   1. `step_1_understand`: Query reformulation, synonym expansion, and technical concept extraction.
   2. `step_2_retrieve`: Non-blocking tool call executing BM25 lexical search, Dense BGE (`BAAI/bge-small-en-v1.5`), Hybrid Reciprocal Rank Fusion (RRF), or Cross-Encoder re-ranking (`cross-encoder/ms-marco-MiniLM-L-6-v2`).
@@ -21,26 +21,26 @@ This document provides the definitive empirical measurements, architectural proo
   5. `step_5_verify` (Check & Redraft): Verifies factual claims and page citations against raw source chunks; triggers self-correction redraft if hallucination or unsupported claim is detected; skippable under degraded mode.
 - **Core Technology Stack**:
   - Python 3.12, `asyncio`, `httpx` (streaming SSE client), `FastAPI` + `uvicorn` (stand-in server), `pymupdf` (PDF layout extraction), `rank_bm25`, `sentence-transformers`, `pandas`.
-  - **Zero High-Level Agent Wrappers**: Explicitly avoided LangChain, LlamaIndex, or AutoGen. Every queue, retry loop, step timer, and cancellation boundary is directly implemented and inspectable in pure Python.
-- **Strict Grounding & Citation Invariants**:
+  - **No High-Level Agent Wrappers**: I avoided LangChain, LlamaIndex, or AutoGen so that every queue, retry loop, step timer, and cancellation boundary is directly visible and debuggable in plain Python.
+- **Grounding & Citation Rules**:
   - Every answer must carry page-anchored citations: `[Paper Title, Sec X, p. N]`.
-  - Truthful refusal invariant: When evidence is missing or the question is unanswerable, the system outputs `"The papers do not say."` It never hallucinates or extrapolates to appear helpful.
+  - Truthful refusal: When evidence is missing or the question is unanswerable, the system outputs `"The papers do not say."` It never hallucinates or extrapolates to appear helpful.
 
 ---
 
 ## 2. Real Service and Stand-In
 
 ### Real Groq Service Probes (`qwen/qwen3.8-27b`)
-- Probed using [`src/probe_groq.py`](file:///c:/Users/rabbu/OneDrive/Desktop/Projects/Relay/src/probe_groq.py); results saved in [`raw/probe_sequential.json`](file:///c:/Users/rabbu/OneDrive/Desktop/Projects/Relay/raw/probe_sequential.json), [`raw/probe_concurrent.json`](file:///c:/Users/rabbu/OneDrive/Desktop/Projects/Relay/raw/probe_concurrent.json), [`raw/probe_429.json`](file:///c:/Users/rabbu/OneDrive/Desktop/Projects/Relay/raw/probe_429.json), and [`raw/probe_recovery_refill_curve.json`](file:///c:/Users/rabbu/OneDrive/Desktop/Projects/Relay/raw/probe_recovery_refill_curve.json):
+- Probed using [`src/probe_groq.py`](src/probe_groq.py); results saved in [`raw/probe_sequential.json`](raw/probe_sequential.json), [`raw/probe_concurrent.json`](raw/probe_concurrent.json), [`raw/probe_429.json`](raw/probe_429.json), and [`raw/probe_recovery_refill_curve.json`](raw/probe_recovery_refill_curve.json):
   - **Median Internal TTFT**: `801–887 ms` on multi-thousand token prompts.
   - **Generation Speed**: `~300 tokens/sec`.
-  - **Concurrency Plateau**: 3 concurrent in-flight requests finished in `470.4 ms` with zero queuing penalty (lower bound $\ge 3$).
+  - **Concurrency Lower Bound**: 3 concurrent in-flight requests finished in `470.4 ms` with zero queuing penalty (lower bound $\ge 3$).
   - **Rate Limit Headers**: Gateway header reports `x-ratelimit-limit-requests: 1000` (RPD) and `x-ratelimit-limit-tokens: 8000`.
   - **Enforced Token Cap**: The HTTP 429 error response body reveals the true enforced limit: `Limit 7000, Used ..., Requested ...`. The binding limit is **7,000 Input Tokens Per Minute (ITPM)**.
-  - **Token Refill Dynamics**: Measured continuously in [`raw/probe_recovery_refill_curve.json`](file:///c:/Users/rabbu/OneDrive/Desktop/Projects/Relay/raw/probe_recovery_refill_curve.json) across multiple intervals ($t+8s$, $t+20s$). The bucket refills at $116.7\text{ to }122.3\text{ tokens/sec}$, precisely matching continuous refill ($\frac{7,000}{60\text{s}} = 116.67\text{ tok/s}$).
-  - **Single-Request Oversize Limit**: An 8,512-token prompt returned **HTTP 413 Payload Too Large** ([`raw/probe_429_deliberate.json`](file:///c:/Users/rabbu/OneDrive/Desktop/Projects/Relay/raw/probe_429_deliberate.json)), proving that single-request context overflow is rejected with 413, whereas cumulative rate exhaustion produces 429.
+  - **Token Refill Dynamics**: Measured continuously in [`raw/probe_recovery_refill_curve.json`](raw/probe_recovery_refill_curve.json) across multiple intervals ($t+8s$, $t+20s$). The bucket refills at $116.7\text{ to }122.3\text{ tokens/sec}$, precisely matching continuous refill ($\frac{7,000}{60\text{s}} = 116.67\text{ tok/s}$).
+  - **Single-Request Oversize Limit**: An 8,512-token prompt returned **HTTP 413 Payload Too Large** ([`raw/probe_429_deliberate.json`](raw/probe_429_deliberate.json)), proving that single-request context overflow is rejected with 413, whereas cumulative rate exhaustion produces 429.
 
-### Calibrated Stand-In Server ([`standin/server.py`](file:///c:/Users/rabbu/OneDrive/Desktop/Projects/Relay/standin/server.py))
+### Calibrated Stand-In Server ([`standin/server.py`](standin/server.py))
 - **TTFT Calibration with Prefill Penalty**: Base TTFT sampled from log-normal distribution ($\mu = 5.90, \sigma = 0.23$) with an added linear prompt prefill term ($0.04\text{ ms} \times \text{tokens\_in}$):
   $$\text{TTFT} = \text{base\_ms} + 0.04 \times \text{tokens\_in}$$
   This reproduces realistic 800–1,200 ms latency when ingesting 2,000–3,000 token retrieved contexts.
@@ -50,7 +50,7 @@ This document provides the definitive empirical measurements, architectural proo
   - Implements a rolling daily pool of 1,000 requests recharging at 1 request every 86.4 seconds ($86,400\text{s} / 1,000$).
 - **Single-Request Guard**: Prompts $> 8,000$ tokens immediately return HTTP 413.
 - **Fault Injection**: Hooks for `error_rate` (500s), `timeout_rate` (hangs), and `slow_rate` (tail latency).
-- **Auditable Discrepancies**:
+- **Known Differences from Real Service**:
   1. *Compute Footprint*: Mock runs locally with $<1\%$ CPU footprint; does not emulate GPU memory contention or thermal throttling.
   2. *Network Jitter*: Localhost socket communication eliminates cloud load balancer routing delays and WAN packet retransmissions.
   3. *Token Tokenizer*: Stand-in uses whitespace tokenization calibrated against GPT/Qwen BPE tokenizers ($\approx 1.3 \times \text{words}$).
@@ -59,7 +59,7 @@ This document provides the definitive empirical measurements, architectural proo
 
 ## 3. Benchmark Results (Tables 1, 2a, 2b, 3)
 
-All numbers below are generated directly from [`results.csv`](file:///c:/Users/rabbu/OneDrive/Desktop/Projects/Relay/results.csv) by [`analysis/tables.py`](file:///c:/Users/rabbu/OneDrive/Desktop/Projects/Relay/analysis/tables.py) and verified by [`analysis/verify_tables.py`](file:///c:/Users/rabbu/OneDrive/Desktop/Projects/Relay/analysis/verify_tables.py):
+All numbers below are generated directly from [`results.csv`](results.csv) by [`analysis/tables.py`](analysis/tables.py) and verified by [`analysis/verify_tables.py`](analysis/verify_tables.py):
 
 ### Table 1: Real Model Service & Rate Limit Parameters (`qwen/qwen3.8-27b`)
 
@@ -112,12 +112,12 @@ All numbers below are generated directly from [`results.csv`](file:///c:/Users/r
 | **Setting B (`dense_k3_c256`)** | 256 tokens × top-3 (Dense BGE Semantic) | **68.8%** | 3139.1 | 592.3 ms | 2549.6 ms | **Yes (Fast / Cheap)** |
 | **Setting C (`dense_k3_c512`)** | 512 tokens × top-3 (Dense BGE Context) | **68.8%** | 4178.2 | 705.1 ms | 2473.2 ms | **No (High tokens; dilutes tables)** |
 
-> *Quality Scoring Methodology & Controlled Isolations*:
-> - **Zero Status/Grade Contradictions**: Quality is calculated strictly on completed requests (`status == 'ok'`). All 48 rows in `results.csv` for `retrieval_sweep` completed with `status == 'ok'` under dynamic token pacing ($\ge 4,500$ token threshold).
-> - **Sample Size & Statistical Reality ($N=16$)**: Setting B answered **11/16** correctly vs Setting A's **9/16**—a difference of exactly **two questions**. Their 95% Wilson score confidence intervals overlap heavily ([44.4%, 85.8%] for B vs [33.2%, 76.9%] for A; McNemar's exact test $p = 0.50$). This cannot be claimed as a statistically proven "quality lift"; rather, it reflects qualitative retrieval differences on specific multi-concept queries.
-> - **Qualitative Mechanism (`q01` and `q10`)**: Dense semantic retrieval resolved two specific questions where BM25 suffered vocabulary mismatch: `q01` (base Transformer parameters, where dimensions are split across paragraphs) and `q10` (Moshi Inner Monologue, phrased with descriptive concepts lacking query keywords). On the remaining 14 of 16 questions, BM25 and Dense BGE agreed completely (including all 5 unanswerable questions truthfully refused).
-> - **Chunk Size Isolation & Cost Inefficiency (512 vs 256 tokens)**: Setting C consumed **+33.1% more tokens** (4,178.2 vs 3,139.1 tokens/answer) and achieved **11/16 (68.8%)**, tying Setting B in overall accuracy. Individual question analysis reveals qualitative trade-offs: 512-token chunks gained `q11` (Moshi text tokenizer) but lost `q10` (Inner Monologue, where extra narrative diluted the model's extraction focus). Larger chunks increased token burn rate by one third without delivering net accuracy gains.
-> - **Truthful Refusal Invariant**: All 5 near-miss unanswerable questions (`q12`–`q16`) were truthfully refused across all 3 settings without hardcoded keyword shortcuts.
+> *Notes on Table 3*:
+> - All 48 benchmark runs (16 per setting) completed successfully (`status=ok`) by pacing queries to respect Groq's remaining token headroom ($\ge 4,500$ tokens) before dispatching the next request.
+> - **Sample Size ($N=16$)**: Setting B answered **11/16** correctly vs Setting A's **9/16** (+12.6 percentage points, i.e. 11/16 vs 9/16: a two-question gap, too small to call a real difference). Their 95% Wilson score confidence intervals overlap heavily ([44.4%, 85.8%] for B vs [33.2%, 76.9%] for A; McNemar's exact test $p = 0.50$). This cannot be claimed as a statistically proven difference; rather, it highlights qualitative retrieval differences on specific multi-concept queries.
+> - **Qualitative Breakdown (`q01` and `q10`)**: Dense BGE retrieved relevant passages for two questions where BM25 failed on vocabulary mismatch: `q01` (base Transformer parameters, where dimensions are split across paragraphs) and `q10` (Moshi Inner Monologue, phrased with descriptive concepts lacking verbatim query keywords). On the remaining 14 of 16 questions, BM25 and Dense BGE produced identical outcomes (including all 5 unanswerable questions truthfully refused).
+> - **Chunk Inefficiency (512 vs 256 tokens)**: Setting C consumed **+33.1% more tokens** (4,178.2 vs 3,139.1 tokens/answer) and achieved **11/16 (68.8%)**, tying Setting B in overall accuracy. Individual question analysis reveals trade-offs: 512-token chunks gained `q11` (Moshi text tokenizer description) but lost `q10` (Inner Monologue, where extra narrative diluted the model's extraction focus). Larger chunks increased token burn rate by one-third without delivering net accuracy gains.
+> - **Truthful Refusal**: All 5 near-miss unanswerable questions (`q12`–`q16`) were truthfully refused across all 3 settings without hardcoded keyword shortcuts.
 
 ---
 
@@ -145,30 +145,30 @@ All numbers below are generated directly from [`results.csv`](file:///c:/Users/r
 - **Post-First-Token Delay (`total_ms - first_token_ms`)**: `3,532.7 ms` (**73.7%** of total duration)
 - **User-Visible TTFT**: **4,794.0 ms** (**100.0%** of total duration)
 
-> **Architectural Decision & The Streaming Trade-off**:
-> - **Why >74% of delay occurs AFTER internal first token**: In an agentic pipeline, `first_token_ms` measures only the first token emitted by Step 1. The remaining 73.7% is consumed executing the remaining 4 sequential reasoning passes.
-> - **The Streaming Decision**: We deliberately do **not** stream draft tokens from Step 4 before Step 5 verification. If an unverified draft is streamed and subsequently fails the verification gate, the user has already read hallucinated or incorrect claims. Holding output until verification adds +2,244 ms to perceived initial latency, but provides a 100% guarantee of groundedness.
+> **Why I Chose Not to Stream Draft Tokens**:
+> - In an agentic pipeline, `first_token_ms` measures only the first token emitted by Step 1. The remaining 73.7% of total time is spent executing the remaining 4 sequential reasoning passes.
+> - I deliberately chose **not** to stream draft tokens from Step 4 before Step 5 verification finishes. In a voice or technical assistant, streaming an unverified draft means the user reads or hears a potential hallucination before the verification gate can catch it. Holding output until verification adds perceived initial latency, but ensures that whatever text is presented to the user is verified and cited.
 
 ---
 
 ## 5. When a Limit is Hit
 
-### The Headline Insight: The Number They Missed
-- Groq advertises a **30 RPM** rate limit, prompting engineers to assume the system can sustain ~30 requests/minute.
+### The Real Capacity Knee: Tokens, Not Requests
+- Groq advertises a **30 RPM** rate limit, which might suggest a system can handle ~30 requests/minute.
 - However, each verified answer requires 4–5 sequential LLM passes consuming $\approx 2,400\text{--}2,650$ input tokens.
 - Under Groq's enforced **7,000 ITPM limit**, sustainable continuous throughput is strictly:
   $$\text{Capacity} = \frac{7,000\text{ ITPM}}{2,500\text{ tokens/answer}} \approx 2.8\text{ answers/minute}$$
-- In our expanded capacity curve sweep ([`data/capacity_curve_summary.json`](file:///c:/Users/rabbu/OneDrive/Desktop/Projects/Relay/data/capacity_curve_summary.json)):
+- In the stand-in capacity curve sweep ([`data/capacity_curve_summary.json`](data/capacity_curve_summary.json)):
   - At **1.0 to 2.5 APM**, token inflow rises from 2,354.7 to 5,489.8 tok/min, with 100% success and p50 latency under 2.3s.
   - At **3.0 APM** ($N=10$, 20s interval), token inflow reaches **6,473.1 tok/min** (**92.5%** of the 7,000 ITPM cap).
   - At **4.0 APM** (15s interval), token inflow reaches **8,347.7 tok/min** (exceeding the 7,000 cap). The system hits rate-limit backoff, pushing p95 latency from 2.99s to **5.83s** (`token_limit_bound: true`).
   - At **6.0 APM** (10s interval), offered load (9,151.4 tok/min) overwhelms the bucket: success drops to **75.0%**, effective throughput plateaus at **4.60 APM**, and requests encounter 429 backoff and 8.0s deadline timeouts.
-- **Real Groq 3.0 APM Validation** ([`data/capacity_real_groq_check.json`](file:///c:/Users/rabbu/OneDrive/Desktop/Projects/Relay/data/capacity_real_groq_check.json)):
-  To verify this limit on the live service, we dispatched 4 consecutive questions at 3.0 APM (20s interval). By request 3, `x-ratelimit-remaining-tokens` plummeted from full down to **1,283 tokens**. At 20s intervals, Groq only refills $\sim 2,334$ tokens while complex multi-step queries consume $\sim 4,000$ tokens, creating an unsustainable net deficit of $\sim 1,700$ tokens per turn.
+- **Real Groq 3.0 APM Validation** ([`data/capacity_real_groq_check.json`](data/capacity_real_groq_check.json)):
+  To test this limit on the live service, I sent 4 consecutive questions at 3.0 APM (20s interval). By request 3, `x-ratelimit-remaining-tokens` dropped from full down to **1,283 tokens**. At 20s intervals, Groq only refills $\sim 2,334$ tokens while complex multi-step queries consume $\sim 4,000$ tokens, creating an unsustainable net deficit of $\sim 1,700$ tokens per turn.
 - **Token capacity, not request count, is the binding operational constraint.** This elevates retrieval chunk size from an internal tuning knob into an external system capacity lever.
 
 ### How This Library Misleads a Naive Retriever (3 Real Failure Modes)
-Cataloged in [`data/papers/extraction_report.json`](file:///c:/Users/rabbu/OneDrive/Desktop/Projects/Relay/data/papers/extraction_report.json):
+Cataloged in [`data/papers/extraction_report.json`](data/papers/extraction_report.json):
 1. **Linearized Table Grid Collapse (14 tables across corpus)**:
    - *Example*: Transformer Table 2 BLEU scores (Question `q06`). PyMuPDF linearizes 2D table columns into continuous 1D text (`28.4`, `41.8`, `2.3 · 1019`), stripping column headers. Naive retrievers pull numbers without labels, causing hallucinated language mappings or false refusals (`refused_wrongly`).
 2. **Mangled Multi-Line Equations & Formatting (3 major equation clusters)**:
@@ -180,15 +180,15 @@ Cataloged in [`data/papers/extraction_report.json`](file:///c:/Users/rabbu/OneDr
 
 ## 6. Retries & Resilience Architecture
 
-Implemented in [`src/resilience.py`](file:///c:/Users/rabbu/OneDrive/Desktop/Projects/Relay/src/resilience.py):
+Implemented in [`src/resilience.py`](src/resilience.py):
 
-### Resilience Engine Design
+### Resilience Design
 1. **Exponential Backoff with Full Jitter**:
    - AWS Full Jitter: $\text{delay} = \text{Uniform}(0, \min(4.0s, 0.5s \times 2^{\text{attempt}}))$.
    - Obeys upstream `Retry-After` headers, adding minor random jitter ($+50\text{--}250\text{ms}$) to prevent synchronization storms.
 2. **Safety Rules & Global Retry Budget**:
    - Only idempotent status codes `{429, 502, 503, 504, 408}` are retried. Non-retryable client errors (`400, 401, 403, 404, 422`) fail fast. Max 3 retries per request.
-   - **Global Retry Budget**: Retries capped at **25%** of lifetime requests seen.
+   - Retries capped at **25%** of lifetime requests seen.
 3. **Per-Request Deadline (8.0s Justification)**:
    - The 8.0s deadline is derived directly from the pipeline's attempt-backoff-retry runway:
      $$\text{Runway} = \text{Attempt 1 }(2.0\text{s}) + \text{Backoff Wait }(1.5\text{s}) + \text{Attempt 2 Retry }(2.0\text{s}) + \text{Network Buffer }(2.5\text{s}) = 8.0\text{s}$$
@@ -196,7 +196,7 @@ Implemented in [`src/resilience.py`](file:///c:/Users/rabbu/OneDrive/Desktop/Pro
 4. **Bounded Queue & Load Shedding**:
    - Queue capacity: 20 requests. At $\ge 75\%$ capacity (15 requests), incoming requests automatically switch to **Degraded Mode**. At 100% capacity (20 requests), incoming requests are **shed immediately** (`retrieval_setting="shed"`) with 0ms delay.
 
-### Retry Amplification Experiment ([`raw/retry_amplification_demo.json`](file:///c:/Users/rabbu/OneDrive/Desktop/Projects/Relay/raw/retry_amplification_demo.json))
+### Retry Amplification Experiment ([`raw/retry_amplification_demo.json`](raw/retry_amplification_demo.json))
 Tested with 20 concurrent requests offered against a strict 10 RPM server limit:
 - **Blind Retries (No Jitter, No Budget, Infinite Deadline)**: 20 offered requests hammered the server with **50 HTTP calls** (**2.5x amplification**), causing cascading 429 lockouts and a **50.0% failure rate**.
 - **Resilient Retries (Deadline-capped, Jittered Backoff, 25% Budget)**: Controlled total calls to **20** (**60.0% traffic reduction**), preventing server collapse and recovering cleanly.
@@ -211,7 +211,7 @@ The system delivers 4 distinct, transparent user experiences:
 2. **Truthful Refusal (Unsupported Questions)**:
    `"The papers do not say."` (Maintained strictly even in degraded mode).
 3. **Daily Budget Exhaustion Notification**:
-   > *"The Relay research assistant has reached its daily free-tier computation budget (1,000 requests / 500,000 tokens). To ensure strict cost controls, no further automated calls can be made today. Quota refills continuously at 1 request every 86.4 seconds. Please try again later."*
+   > *"The Relay research assistant has reached its daily free-tier computation budget (1,000 requests / 200,000 tokens). To ensure strict cost controls, no further automated calls can be made today. Quota refills continuously at 1 request every 86.4 seconds. Please try again later."*
 4. **Overload Shedding Notification**:
    > *"Server is currently overloaded. Request was shed to protect system stability."*
 
@@ -221,7 +221,7 @@ The system delivers 4 distinct, transparent user experiences:
 
 ### Deliberate Omissions & Trade-Offs
 - **OCR / Vision Table Parsing**: Linearized table collapse was mitigated by isolating tables into 256-token chunks rather than introducing heavy multimodal vision models (e.g. Nougat, Surya). This preserved lightweight, sub-second local ingestion.
-- **Speculative Query Pre-fetching**: We avoided speculative parallel retrieval on rewritten queries to preserve our strict 7,000 ITPM rate limit runway.
+- **Speculative Query Pre-fetching**: I avoided speculative parallel retrieval on rewritten queries to preserve our strict 7,000 ITPM rate limit runway.
 
 ### Core Engineering Learnings
 1. **The Compounding Penalty of Multi-Step Pipelines**:
@@ -229,7 +229,7 @@ The system delivers 4 distinct, transparent user experiences:
 2. **Token Limits Govern Throughput, Not RPM**:
    Free-tier LLM rate limits cannot be modeled by request counts alone. Systems must track cumulative token consumption and scale retrieval context down to maintain operational throughput.
 3. **A/B Isolation of Steady Workload & Event-Loop Health**:
-   We ran a controlled A/B test ([`data/ab_steady_isolation_summary.json`](file:///c:/Users/rabbu/OneDrive/Desktop/Projects/Relay/data/ab_steady_isolation_summary.json)) holding offered rate ($2.6\text{ req/min}$, 23.08s interval) and request count ($N=15$) constant:
+   I ran a controlled A/B test ([`data/ab_steady_isolation_summary.json`](data/ab_steady_isolation_summary.json)) holding offered rate ($2.6\text{ req/min}$, 23.08s interval) and request count ($N=15$) constant:
    - *Pre-fix Architecture (Synchronous CPU retrieval on event loop + lazy model loading)*: Experienced a **5,791.2 ms maximum event loop lag** during cold-start model initialization and synchronous retrieval passes. This pushed p95 total latency to **7,842.1 ms** (on the brink of the 8.0s deadline) and produced an initial timeout (93.3% success).
    - *Post-fix Architecture (`asyncio.to_thread` + preloaded singleton models)*: Reduced maximum event loop lag by **81.3%** down to **1,084.1 ms**, cut p95 total latency from 7,842 ms down to **5,941.0 ms**, and achieved **100.0% success** across all 15 requests.
    - *Root Cause of Original 53% Failure*: Auditing the git history of the original steady run (`commit 795370c`) revealed that requests were arriving with an 8.0s/clustered interval ($\sim 9.7\text{ req/min}$), generating $\sim 25,000\text{ tokens/min}$ against the 7,000 ITPM cap. The original collapse was therefore **both token bucket exhaustion under rapid arrivals AND event-loop blocking during cold-start/retrieval**. Isolating the rate at 2.6 req/min removed token exhaustion, allowing us to isolate and prove the 1,900 ms p95 latency reduction delivered by the async fix.
@@ -270,5 +270,8 @@ Throughout this project, I used the AI assistant as a rapid implementation accel
 3. **Discovering the Live 200,000 TPD Ceiling ("The Second Number They Missed")**:
    Official Groq documentation lists a daily token allowance of 500,000 TPD for `qwen/qwen3.8-27b`. During our real retrieval sweep, at token 199,399, the live API returned HTTP 429 with explicit error payload: `tokens per day (TPD): Limit 200000, Used 199399, Requested 1972`. Rather than accepting doc claims, I logged the live payload as definitive empirical evidence and updated Table 1 with High confidence.
 
-4. **Enforcing Rule 4 (Zero Fabrication Gate)**:
-   I authored an automated verification gate (`analysis/verify_tables.py`) that mathematically recomputes every metric in every table directly from `results.csv` and sidecar microsecond logs. Any discrepancy broke the build, guaranteeing that every claim in this dossier is verifiable and defense-grade.
+4. **Correcting Small Sample Vanity Metrics**:
+   When Setting B scored 11/16 vs Setting A's 9/16, the assistant initially labeled it a "+12.6% quality lift". I called out that a 2-question gap on 16 questions is well within binomial variance ($p=0.50$), and forced the write-up to report the exact fractions and qualitative reasons instead of inflated percentages.
+
+5. **Enforcing Rule 4 (Zero Fabrication Gate)**:
+   I authored an automated verification gate (`analysis/verify_tables.py`) that mathematically recomputes every metric in every table directly from `results.csv` and sidecar microsecond logs. Any discrepancy broke the build, guaranteeing that every claim in this write-up is verifiable and grounded in raw telemetry.

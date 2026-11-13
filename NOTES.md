@@ -346,7 +346,7 @@ This log records decisions, exact empirical measurements, unexpected findings, a
 | Retrieval Setting | Configuration | Quality % | Tokens / Ans | TTFT p50 | Total p50 | Low-Limit / Degraded Fit |
 | :--- | :--- | :---: | :---: | :---: | :---: | :---: |
 | **Setting A (`bm25_k3_c256`)** | 256 tokens × top-3 (BM25 Lexical) | **56.2%** | **2,944.2** | 685.3 ms | 2,501.3 ms | **Yes (Fast / Cheap)** |
-| **Setting B (`dense_k3_c256`)** | 256 tokens × top-3 (Dense BGE Semantic) | **68.8%** | **3,139.1** | 592.3 ms | 2,549.6 ms | **Yes (11/16; resolves q01 & q10)** |
+| **Setting B (`dense_k3_c256`)** | 256 tokens × top-3 (Dense BGE Semantic) | **68.8%** | **3,139.1** | 592.3 ms | 2,549.6 ms | **Yes (+12.6 pp over BM25; 2 questions, not conclusive)** |
 | **Setting C (`dense_k3_c512`)** | 512 tokens × top-3 (Dense BGE Context) | **68.8%** | **4,178.2** | 705.1 ms | 2,473.2 ms | **No (+33.1% tokens; chunk inefficiency)** |
 
 ### Slow Request Latency Decomposition (`eval_bm25_k3_c256_q02` on Real Groq)
@@ -369,7 +369,7 @@ This log records decisions, exact empirical measurements, unexpected findings, a
 ### Four Non-Obvious Empirical Surprises
 1. **The Binding Constraint is Tokens, Not Requests (7,000 ITPM Knee at 4.0 APM)**:
    - While RPM is 30, verified multi-step RAG consumes ~2,500 tokens/answer, creating a strict physical ceiling of ~2.8 answers/minute.
-2. **Dense BGE Resolves 2 Multi-Concept Queries (11/16 vs 9/16), But Chunk Inflation Wastes Quota**:
+2. **Dense BGE Scored 12.6 Points Higher Than BM25 (Small Sample), But Chunk Dilution Harms Precision**:
    - Dense BGE achieved 11/16 vs 9/16 for BM25. However, expanding chunks to 512 tokens increased token cost by 33.1% (4,178.2 vs 3,139.1) with zero net accuracy gain (tied at 11/16). While 512-token chunks helped on q11, it diluted context on q10.
 3. **Multi-Step Sequential Compounding Causes Timeouts Before Rate Limits Under Concurrency**:
    - In the burst scenario, 96.0% of failures were 8.0s deadline timeouts from multi-step latency compounding, not 429 errors.

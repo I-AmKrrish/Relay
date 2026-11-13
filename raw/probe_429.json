@@ -17,7 +17,7 @@
     "x-ratelimit-reset-requests": "12m57.599s",
     "x-ratelimit-reset-tokens": "41.914s",
     "x-request-id": "req_01m73kgg7fe7f9n4fed4sd45ps",
-    "set-cookie": "__cf_bm=qJ02hH39ljrl2QMT3qYRZIh1cYikYnTd3kKZJczYcGU-1794343714.999955-1.0.1.1-h2YHsvsO1LHp3XAe45aJFC0I6rhFpfVn3g5P6sJu41nMAZXCDAcvk2Z8pzblCTvtRiB.i5ClQd5CzWjGw0KBnsCTk6AqQ0kRGkD4sZm4e4fpkIV0ldCA0kthI1a0CxOZ; HttpOnly; SameSite=None; Partitioned; Secure; Path=/; Domain=groq.com; Expires=Tue, 10 Nov 2026 21:18:35 GMT",
+    "set-cookie": "[REDACTED]",
     "via": "1.1 google",
     "strict-transport-security": "max-age=15552000",
     "cf-cache-status": "DYNAMIC",
@@ -26,7 +26,7 @@
   },
   "body": {
     "error": {
-      "message": "Rate limit reached for model `qwen/qwen3.8-27b` in organization `org_01m4jdz8m1evk8q3ekybzar6t6` service tier `on_demand` on input tokens per minute (ITPM): Limit 7000, Used 4890, Requested 4012. Please try again in 16.302857142s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing",
+      "message": "Rate limit reached for model `qwen/qwen3.8-27b` in organization `org_REDACTED` service tier `on_demand` on input tokens per minute (ITPM): Limit 7000, Used 4890, Requested 4012. Please try again in 16.302857142s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing",
       "type": "tokens",
       "code": "rate_limit_exceeded"
     }

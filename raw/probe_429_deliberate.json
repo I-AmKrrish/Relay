@@ -18,7 +18,7 @@
     "x-ratelimit-reset-requests": "11m31.2s",
     "x-ratelimit-reset-tokens": "30.42s",
     "x-request-id": "req_01m73kg5wcebnbaq27xajbscvh",
-    "set-cookie": "__cf_bm=RvI2XUoJNjiZd65Lb.n7O8YboI6NSvwpeZSQb.jz25I-1794343704.3334801-1.0.1.1-T2K6tvyh8qNNHd1IJhx_x2ra9Nd9Oom.lnthjQhXXC.FxZ0Aaq1jU2CO41pbqG1lwl7FKw8CYCUneZURSieVV2VaGDruTq99UyPk1lphpzkq_f3E.n81YdGjeTSUn7w5; HttpOnly; SameSite=None; Partitioned; Secure; Path=/; Domain=groq.com; Expires=Tue, 10 Nov 2026 21:18:24 GMT",
+    "set-cookie": "[REDACTED]",
     "via": "1.1 google",
     "strict-transport-security": "max-age=15552000",
     "cf-cache-status": "DYNAMIC",
@@ -27,7 +27,7 @@
   },
   "body": {
     "error": {
-      "message": "Request too large for model `qwen/qwen3.8-27b` in organization `org_01m4jdz8m1evk8q3ekybzar6t6` service tier `on_demand` on input tokens per minute (ITPM): Limit 7000, Requested 8512, please reduce your message size and try again. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing",
+      "message": "Request too large for model `qwen/qwen3.8-27b` in organization `org_REDACTED` service tier `on_demand` on input tokens per minute (ITPM): Limit 7000, Requested 8512, please reduce your message size and try again. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing",
       "type": "tokens",
       "code": "rate_limit_exceeded"
     }
